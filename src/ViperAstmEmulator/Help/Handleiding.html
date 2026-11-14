@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handleiding Viper ASTM Emulator</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --accent: #1565c0;
+    --border: #d9dde3; --panel: #f5f7fa; --code-bg: #f0f2f5;
+    --note-bg: #eef5ff; --note-border: #1565c0;
+    --warn-bg: #fff6e5; --warn-border: #b26a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c; --fg: #e3e6ea; --muted: #9aa3ad; --accent: #6aa9ff;
+      --border: #30353c; --panel: #1e2126; --code-bg: #23272d;
+      --note-bg: #17243a; --note-border: #6aa9ff;
+      --warn-bg: #2d2412; --warn-border: #e0a03a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.6 "Segoe UI", system-ui, sans-serif;
+  }
+  .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+  nav {
+    position: sticky; top: 0; align-self: flex-start; height: 100vh; overflow-y: auto;
+    width: 260px; flex-shrink: 0; padding: 28px 16px 28px 24px; border-right: 1px solid var(--border);
+    font-size: 14px;
+  }
+  nav .title { font-weight: 600; margin-bottom: 12px; }
+  nav ol { padding-left: 18px; margin: 0; }
+  nav li { margin: 3px 0; }
+  nav a { color: var(--fg); text-decoration: none; }
+  nav a:hover { color: var(--accent); }
+  main { flex: 1; min-width: 0; padding: 28px 40px 80px; max-width: 880px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin: 0 0 28px; }
+  h2 { font-size: 21px; margin: 44px 0 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+  h3 { font-size: 16px; margin: 26px 0 6px; }
+  a { color: var(--accent); }
+  code, kbd, pre { font-family: "Cascadia Mono", Consolas, monospace; font-size: 13px; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--panel); }
+  pre { background: var(--code-bg); padding: 12px 14px; border-radius: 6px; overflow-x: auto; line-height: 1.45; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 16px; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  th { background: var(--panel); font-weight: 600; }
+  .ui { font-weight: 600; }
+  .note, .warn { padding: 10px 14px; border-left: 4px solid; border-radius: 4px; margin: 14px 0; }
+  .note { background: var(--note-bg); border-color: var(--note-border); }
+  .warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  ol.steps li { margin: 6px 0; }
+  .tx { color: #1565c0; } .rx { color: #2e7d32; }
+  @media (prefers-color-scheme: dark) { .tx { color: #6aa9ff; } .rx { color: #6fcf7a; } }
+  @media (max-width: 820px) {
+    .layout { display: block; }
+    nav { position: static; height: auto; width: auto; border-right: 0; border-bottom: 1px solid var(--border); padding: 16px; }
+    main { padding: 20px 16px 60px; }
+  }
+  @media print { nav { display: none; } main { max-width: none; } }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <div class="title">Inhoud</div>
+  <ol>
+    <li><a href="#inleiding">Inleiding</a></li>
+    <li><a href="#installatie">Installatie en starten</a></li>
+    <li><a href="#snelstart">Snel aan de slag</a></li>
+    <li><a href="#scherm">Het hoofdscherm</a></li>
+    <li><a href="#verbinding">Tabblad Connection</a></li>
+    <li><a href="#instrument">Tabblad Instrument &amp; message</a></li>
+    <li><a href="#targets">Tabblad Assay targets</a></li>
+    <li><a href="#specimens">Monsters en resultaten</a></li>
+    <li><a href="#versturen">Resultaten versturen</a></li>
+    <li><a href="#hostquery">Host query en orders</a></li>
+    <li><a href="#editor">Message editor</a></li>
+    <li><a href="#ontvangen">Ontvangen berichten</a></li>
+    <li><a href="#log">Communicatielog</a></li>
+    <li><a href="#foutsimulatie">Foutsimulatie</a></li>
+    <li><a href="#autosend">Automatisch versturen</a></li>
+    <li><a href="#simulator">LIS-simulator</a></li>
+    <li><a href="#bericht">Opbouw van het bericht</a></li>
+    <li><a href="#protocol">Protocol (laag niveau)</a></li>
+    <li><a href="#problemen">Problemen oplossen</a></li>
+    <li><a href="#bestanden">Bestanden en opdrachtregel</a></li>
+  </ol>
+</nav>
+
+<main>
+<h1>Viper ASTM Emulator</h1>
+<p class="subtitle">Gebruikershandleiding — emulatie van een BD Viper LT die BD Onclarity HPV-resultaten via ASTM naar een LIS verstuurt</p>
+
+<!-- 1 -->
+<h2 id="inleiding">1. Inleiding</h2>
+<p>De Viper ASTM Emulator gedraagt zich als een <strong>BD Viper LT</strong>-analyzer. Hij verstuurt
+<strong>BD Onclarity HPV</strong>-resultaten (genotypering) naar een laboratoriuminformatiesysteem (LIS). Zo kunt u een
+LIS-koppeling ontwikkelen, testen en valideren zonder dat er een echt instrument nodig is.</p>
+<p>De emulator ondersteunt:</p>
+<ul>
+  <li><strong>ASTM E1381 / CLSI LIS1-A</strong>: het transportprotocol met ENQ/ACK/NAK/EOT, frames, checksums, herhalingen en time-outs.</li>
+  <li><strong>ASTM E1394 / CLSI LIS2-A2</strong>: de berichtrecords H (header), P (patiënt), O (order), C (commentaar), R (resultaat), Q (query) en L (afsluiting).</li>
+  <li>Verbinding via <strong>TCP/IP</strong> (als client of als server) of via een <strong>seriële poort</strong> (RS-232).</li>
+</ul>
+<div class="warn">
+  <strong>Let op:</strong> de berichtopbouw is gebaseerd op de LIS2-A2-standaard en op de rapportagekanalen van de Onclarity-assay,
+  <em>niet</em> op de officiële LIS-interfacespecificatie van BD voor de Viper LT. Controleer veldposities, testcodes en
+  resultaatwaarden tegen de BD-documentatie voordat u de emulator gebruikt voor een formele validatie. U kunt al deze
+  onderdelen in de emulator aanpassen.
+</div>
+
+<!-- 2 -->
+<h2 id="installatie">2. Installatie en starten</h2>
+<h3>Vereisten</h3>
+<ul>
+  <li>Windows 10 of 11</li>
+  <li>.NET 10 Desktop Runtime (of de .NET 10 SDK om zelf te bouwen)</li>
+</ul>
+<h3>Bouwen en starten vanuit de broncode</h3>
+<pre>dotnet build ViperAstmEmulator.sln
+dotnet run --project src/ViperAstmEmulator</pre>
+<p>U kunt ook <code>ViperAstmEmulator.exe</code> direct starten vanuit de map
+<code>src\ViperAstmEmulator\bin\Debug\net10.0-windows\</code>.</p>
+<p>Deze handleiding opent u in de emulator met de knop <span class="ui">Help</span> of met <kbd>F1</kbd>.</p>
+
+<!-- 3 -->
+<h2 id="snelstart">3. Snel aan de slag</h2>
+<ol class="steps">
+  <li>Start de emulator. Er staan al vijf willekeurige monsters in de lijst.</li>
+  <li>Ga links naar het tabblad <span class="ui">Connection</span>. Kies bij <span class="ui">Mode</span> voor
+      <code>TcpClient</code> en vul het adres (<span class="ui">LIS host</span>) en de <span class="ui">Port</span> van uw LIS in.</li>
+  <li>Klik op <span class="ui">Connect</span>. Het statuslampje wordt groen zodra de verbinding er is.</li>
+  <li>Selecteer een of meer monsters in het tabblad <span class="ui">Specimens</span> en klik op <span class="ui">Send selected</span>.</li>
+  <li>Volg het berichtenverkeer onderin het venster, in de <span class="ui">Communication log</span>.</li>
+</ol>
+<div class="note">Hebt u (nog) geen LIS? Gebruik dan de meegeleverde <a href="#simulator">LIS-simulator</a>.</div>
+
+<!-- 4 -->
+<h2 id="scherm">4. Het hoofdscherm</h2>
+<table>
+  <tr><th>Onderdeel</th><th>Functie</th></tr>
+  <tr><td>Linkerpaneel</td><td>Instellingen, verdeeld over drie tabbladen: <span class="ui">Connection</span>, <span class="ui">Instrument &amp; message</span> en <span class="ui">Assay targets</span>.</td></tr>
+  <tr><td>Werkbalk (boven)</td><td>Verbinden en verbreken, de verbindingsstatus, <span class="ui">Send selected</span>, <span class="ui">Send all</span>, <span class="ui">Host query</span>, automatisch versturen, tellers en <span class="ui">Help</span>.</td></tr>
+  <tr><td>Middengedeelte</td><td>De tabbladen <span class="ui">Specimens</span>, <span class="ui">Message editor</span> en <span class="ui">Received from LIS</span>.</td></tr>
+  <tr><td>Onderste paneel</td><td>De <span class="ui">Communication log</span> met al het verkeer en alle meldingen.</td></tr>
+</table>
+<p>De panelen zijn met de scheidingslijnen tussen de onderdelen groter of kleiner te slepen.</p>
+<h3>Statuslampje</h3>
+<table>
+  <tr><th>Kleur</th><th>Betekenis</th></tr>
+  <tr><td>Grijs</td><td>Niet verbonden</td></tr>
+  <tr><td>Oranje</td><td>Bezig met verbinden, of wachten tot het LIS verbinding maakt (servermodus)</td></tr>
+  <tr><td>Groen</td><td>Verbonden; berichten kunnen worden verstuurd</td></tr>
+</table>
+<p>De tellers rechts in de werkbalk tonen hoeveel berichten zijn verstuurd (<em>Sent</em>), hoeveel er zijn mislukt (<em>Failed</em>) en hoeveel er van het LIS zijn ontvangen (<em>Received</em>).</p>
+
+<!-- 5 -->
+<h2 id="verbinding">5. Tabblad Connection</h2>
+<p>De verbindingsinstellingen zijn alleen te wijzigen als er geen verbinding is. Klik zo nodig eerst op <span class="ui">Disconnect</span>.</p>
+<h3>Transport</h3>
+<table>
+  <tr><th>Instelling</th><th>Uitleg</th></tr>
+  <tr><td><span class="ui">Mode</span></td><td>
+    <code>TcpClient</code>: de emulator maakt verbinding met het LIS.<br>
+    <code>TcpServer</code>: de emulator luistert op een poort en het LIS maakt verbinding.<br>
+    <code>Serial</code>: verbinding via een COM-poort.</td></tr>
+  <tr><td><span class="ui">LIS host</span></td><td>Hostnaam of IP-adres van het LIS (alleen bij TcpClient).</td></tr>
+  <tr><td><span class="ui">Bind address</span></td><td>Netwerkadres waarop de server luistert (alleen bij TcpServer). Leeg betekent: alle netwerkkaarten.</td></tr>
+  <tr><td><span class="ui">Port</span></td><td>TCP-poortnummer (standaard 5000).</td></tr>
+  <tr><td><span class="ui">Auto-reconnect</span></td><td>Bij TcpClient: probeer elke 3 seconden opnieuw te verbinden als de verbinding wegvalt of niet lukt. In servermodus wacht de emulator na een verbroken verbinding altijd op een nieuwe.</td></tr>
+  <tr><td><span class="ui">COM port</span></td><td>Seriële poort, bijvoorbeeld <code>COM1</code>. Met de knop ↻ vernieuwt u de lijst met beschikbare poorten.</td></tr>
+  <tr><td><span class="ui">Baud rate, Data bits, Parity, Stop bits, Handshake</span></td><td>Seriële instellingen. Gebruikelijk is 9600 baud, 8 databits, geen pariteit en 1 stopbit (9600 8N1).</td></tr>
+</table>
+<h3>Low level (LIS1-A / E1381)</h3>
+<table>
+  <tr><th>Instelling</th><th>Uitleg</th></tr>
+  <tr><td><span class="ui">Each record starts a new frame</span></td><td>Aan (standaard): elk record begint in een nieuw frame en eindigt met ETX. Uit: alle records worden aan elkaar geplakt en alleen op framegrootte opgedeeld.</td></tr>
+  <tr><td><span class="ui">Max text per frame</span></td><td>Maximaal aantal tekens per frame, 1 tot 240 (standaard 240). Met een lage waarde test u of het LIS vervolgframes (ETB) goed verwerkt.</td></tr>
+  <tr><td><span class="ui">Reply timeout (s)</span></td><td>Hoe lang de emulator wacht op een ACK of NAK na een ENQ of een frame (de standaard schrijft 15 s voor).</td></tr>
+  <tr><td><span class="ui">Receive timeout (s)</span></td><td>Hoe lang de emulator bij het ontvangen wacht op het volgende frame (de standaard schrijft 30 s voor).</td></tr>
+</table>
+
+<!-- 6 -->
+<h2 id="instrument">6. Tabblad Instrument &amp; message</h2>
+<h3>Header record (H)</h3>
+<table>
+  <tr><th>Instelling</th><th>ASTM-veld</th><th>Uitleg</th></tr>
+  <tr><td><span class="ui">Instrument name</span></td><td>H.5.1</td><td>Naam van de afzender, standaard <code>BD Viper LT</code>.</td></tr>
+  <tr><td><span class="ui">Serial number</span></td><td>H.5.2</td><td>Serienummer van het instrument.</td></tr>
+  <tr><td><span class="ui">Software version</span></td><td>H.5.3</td><td>Softwareversie van het instrument.</td></tr>
+  <tr><td><span class="ui">Receiver ID</span></td><td>H.10</td><td>Identificatie van de ontvanger (het LIS).</td></tr>
+  <tr><td><span class="ui">Processing ID</span></td><td>H.12</td><td><code>P</code> = productie, <code>T</code> = training, <code>D</code> = debug, <code>Q</code> = kwaliteitscontrole.</td></tr>
+  <tr><td><span class="ui">Version</span></td><td>H.13</td><td>Versie van de standaard, standaard <code>LIS2-A2</code>.</td></tr>
+</table>
+<h3>Order / result records</h3>
+<table>
+  <tr><th>Instelling</th><th>Uitleg</th></tr>
+  <tr><td><span class="ui">Assay code</span></td><td>Testcode in het orderrecord (O.5) en in het resultaatrecord met de totaaluitslag. Standaard <code>HPV</code>.</td></tr>
+  <tr><td><span class="ui">Specimen type</span></td><td>Monstertype in O.16, bijvoorbeeld <code>Cervical</code>.</td></tr>
+  <tr><td><span class="ui">Operator ID</span></td><td>Gebruiker die in elk resultaatrecord wordt vermeld (R.11).</td></tr>
+  <tr><td><span class="ui">Ct values</span></td><td>
+    <code>None</code>: alleen de kwalitatieve uitslag.<br>
+    <code>SeparateRecord</code>: een extra R-record per target, bijvoorbeeld <code>R|2|^^^HPV16^CT|27.3</code>.<br>
+    <code>ResultComponent</code>: de Ct-waarde als tweede component van de uitslag, bijvoorbeeld <code>POS^27.3</code>.</td></tr>
+  <tr><td><span class="ui">Patient demographics in P record</span></td><td>Patiëntnummer, naam, geboortedatum en geslacht meesturen. Uit: een leeg P-record (<code>P|1</code>).</td></tr>
+  <tr><td><span class="ui">Rack^position in O.4</span></td><td>Rek en positie meesturen, bijvoorbeeld <code>R01^3</code>.</td></tr>
+  <tr><td><span class="ui">Report internal control (BC)</span></td><td>De uitslag van de interne controle (bèta-globine) meesturen.</td></tr>
+  <tr><td><span class="ui">Report overall interpretation</span></td><td>Een extra resultaatrecord met de totaaluitslag (POS/NEG/IND/INV) meesturen.</td></tr>
+  <tr><td><span class="ui">Trim trailing empty fields</span></td><td>Lege velden aan het eind van een record weglaten (bijvoorbeeld <code>L|1|N</code> in plaats van <code>L|1|N|||</code>).</td></tr>
+  <tr><td><span class="ui">Batch all specimens in one message</span></td><td>Aan: alle geselecteerde monsters in één bericht (één H … L). Uit (standaard): één bericht per monster.</td></tr>
+</table>
+<h3>Behaviour</h3>
+<table>
+  <tr><th>Instelling</th><th>Uitleg</th></tr>
+  <tr><td><span class="ui">Add orders received from LIS to list</span></td><td>Orders (O-records) die het LIS stuurt, worden als monster aan de lijst toegevoegd. Bestaat het monsternummer al, dan worden de patiëntgegevens bijgewerkt.</td></tr>
+  <tr><td><span class="ui">Specimen ID prefix</span></td><td>Voorvoegsel voor nieuwe monsternummers, bijvoorbeeld <code>HPV</code>; dat geeft <code>HPV000001</code>.</td></tr>
+  <tr><td><span class="ui">Next specimen no.</span></td><td>Volgnummer voor het volgende nieuwe monster.</td></tr>
+  <tr><td><span class="ui">Auto-send interval (s)</span></td><td>Interval in seconden voor <a href="#autosend">automatisch versturen</a>.</td></tr>
+</table>
+
+<!-- 7 -->
+<h2 id="targets">7. Tabblad Assay targets</h2>
+<p>Hier staan de rapportagekanalen van de assay. Standaard zijn dat de kanalen van BD Onclarity HPV met uitgebreide genotypering:</p>
+<table>
+  <tr><th>Code</th><th>Naam</th><th>Toelichting</th></tr>
+  <tr><td><code>HPV16</code></td><td>HPV 16</td><td>Afzonderlijk genotype</td></tr>
+  <tr><td><code>HPV18</code></td><td>HPV 18</td><td>Afzonderlijk genotype</td></tr>
+  <tr><td><code>HPV45</code></td><td>HPV 45</td><td>Afzonderlijk genotype</td></tr>
+  <tr><td><code>HPV31</code></td><td>HPV 31</td><td>Afzonderlijk genotype</td></tr>
+  <tr><td><code>HPV51</code></td><td>HPV 51</td><td>Afzonderlijk genotype</td></tr>
+  <tr><td><code>HPV52</code></td><td>HPV 52</td><td>Afzonderlijk genotype</td></tr>
+  <tr><td><code>HPV33_58</code></td><td>HPV 33/58</td><td>Groep</td></tr>
+  <tr><td><code>HPV35_39_68</code></td><td>HPV 35/39/68</td><td>Groep</td></tr>
+  <tr><td><code>HPV56_59_66</code></td><td>HPV 56/59/66</td><td>Groep</td></tr>
+  <tr><td><code>BC</code></td><td>Beta-globin control</td><td>Interne controle (kolom <span class="ui">Control</span> aangevinkt)</td></tr>
+</table>
+<p>De code komt in het resultaatrecord terecht als <code>^^^CODE</code> (veld R.3). Pas de codes aan zodat ze overeenkomen met
+de testcodes in uw LIS. Met <span class="ui">On</span> zet u een kanaal aan of uit, met <span class="ui">Add</span> en
+<span class="ui">Remove</span> voegt u kanalen toe of verwijdert u ze, en met <span class="ui">Reset to Onclarity</span> herstelt u de standaardlijst.</p>
+<div class="note">Wijzigingen gelden alleen voor <strong>nieuw aangemaakte</strong> monsters. Bestaande monsters houden hun kanalen.</div>
+
+<!-- 8 -->
+<h2 id="specimens">8. Monsters en resultaten (tabblad Specimens)</h2>
+<h3>Monsters toevoegen</h3>
+<p>Kies bovenin een <span class="ui">Scenario</span> en klik op <span class="ui">Add specimen</span> (één monster) of
+<span class="ui">Add 10</span> (tien monsters). Patiëntgegevens, rek en positie worden automatisch ingevuld.</p>
+<table>
+  <tr><th>Scenario</th><th>Resultaat</th></tr>
+  <tr><td><code>Random</code></td><td>Willekeurig, met een realistische verdeling: circa 82% negatief, en verder HPV 16/18/45-positief, overig hoog-risico, meerdere genotypen, ongeldig en onbepaald.</td></tr>
+  <tr><td><code>Negative</code></td><td>Alle genotypen negatief, controle positief.</td></tr>
+  <tr><td><code>Hpv16Positive</code>, <code>Hpv18Positive</code>, <code>Hpv45Positive</code></td><td>Alleen het genoemde genotype positief.</td></tr>
+  <tr><td><code>OtherHighRiskPositive</code></td><td>Eén willekeurig ander hoog-risicokanaal positief (31, 51, 52 of een van de groepen).</td></tr>
+  <tr><td><code>MultipleGenotypes</code></td><td>Twee of drie kanalen tegelijk positief.</td></tr>
+  <tr><td><code>InvalidControlFailure</code></td><td>Alle genotypen negatief én de interne controle negatief: de totaaluitslag is ongeldig (INV). Er wordt ook een commentaar toegevoegd.</td></tr>
+  <tr><td><code>Indeterminate</code></td><td>Eén kanaal onbepaald (IND), met een hoge Ct-waarde.</td></tr>
+</table>
+<p>Positieve kanalen krijgen een willekeurige Ct-waarde tussen ongeveer 21 en 37. Negatieve kanalen hebben geen Ct-waarde.</p>
+
+<h3>Monsters bewerken</h3>
+<ul>
+  <li>Dubbelklik in de monsterlijst op een cel om het monsternummer, de patiëntgegevens, het rek of de positie te wijzigen. De geboortedatum noteert u als <code>JJJJMMDD</code>.</li>
+  <li>Selecteer een monster om rechts de uitslag per kanaal te zien. Kies per kanaal een <span class="ui">Result</span>
+      (<code>POS</code>, <code>NEG</code>, <code>IND</code> of <code>INV</code>; u mag ook een eigen waarde typen) en vul zo nodig een <span class="ui">Ct</span>-waarde in.</li>
+  <li>Bij <span class="ui">Comment (C record)</span> vult u een vrije tekst in. Die wordt als C-record na het orderrecord meegestuurd.</li>
+  <li><span class="ui">Apply to selected</span> past het gekozen scenario toe op de geselecteerde monsters.</li>
+  <li><span class="ui">Remove selected</span> verwijdert de geselecteerde monsters; <span class="ui">Clear</span> leegt de hele lijst.</li>
+</ul>
+<p>Selecteer meerdere monsters met <kbd>Ctrl</kbd>+klik of <kbd>Shift</kbd>+klik.</p>
+
+<h3>Totaaluitslag</h3>
+<p>De emulator berekent de totaaluitslag (kolom <span class="ui">Result</span>) als volgt:</p>
+<ol>
+  <li>Is minstens één genotype <code>POS</code>, dan is de uitslag <strong>POS</strong>. De interne controle is dan niet vereist.</li>
+  <li>Anders: is een genotype <code>INV</code> of is de interne controle niet positief, dan is de uitslag <strong>INV</strong> (ongeldig).</li>
+  <li>Anders: is een genotype <code>IND</code>, dan is de uitslag <strong>IND</strong> (onbepaald).</li>
+  <li>In alle andere gevallen is de uitslag <strong>NEG</strong>.</li>
+</ol>
+<p>Positieve uitslagen staan in rood in de lijst, ongeldige en onbepaalde in oranje. Tussen haakjes staan de positieve genotypen, bijvoorbeeld <code>POS (16, 52)</code>.</p>
+
+<h3>Status</h3>
+<table>
+  <tr><th>Status</th><th>Betekenis</th></tr>
+  <tr><td>New / Edited</td><td>Aangemaakt of aangepast, nog niet verstuurd</td></tr>
+  <tr><td>Sending...</td><td>Wordt op dit moment verstuurd</td></tr>
+  <tr><td>Sent</td><td>Verstuurd en door het LIS bevestigd (tijdstip in <span class="ui">Last sent</span>)</td></tr>
+  <tr><td>Failed</td><td>Versturen mislukt (geen verbinding, time-out of te vaak geweigerd)</td></tr>
+  <tr><td>Query sent / Query failed</td><td>Host query verstuurd of mislukt</td></tr>
+  <tr><td>Ordered by LIS</td><td>Monster aangemaakt of bijgewerkt op basis van een order van het LIS</td></tr>
+</table>
+
+<!-- 9 -->
+<h2 id="versturen">9. Resultaten versturen</h2>
+<ul>
+  <li><span class="ui">Send selected</span>: verstuurt de resultaten van de geselecteerde monsters.</li>
+  <li><span class="ui">Send all</span>: verstuurt de resultaten van alle monsters in de lijst.</li>
+</ul>
+<p>Standaard krijgt elk monster een eigen bericht. Zet <span class="ui">Batch all specimens in one message</span> aan om alles in één bericht te versturen.
+Het laatst verstuurde bericht verschijnt ook in de <span class="ui">Message editor</span>.</p>
+<p>De emulator verstuurt berichten na elkaar. Komt er tijdens het versturen een bericht van het LIS binnen, dan wordt dat eerst
+afgehandeld. Er gaat dus geen verkeer verloren.</p>
+
+<!-- 10 -->
+<h2 id="hostquery">10. Host query en orders</h2>
+<p>Met <span class="ui">Host query</span> vraagt de emulator het LIS om de orders van de geselecteerde monsters, met een Q-record:</p>
+<pre>H|\^&amp;|||BD Viper LT^VLT0001^3.0|||||LIS||P|LIS2-A2|20261114103000
+Q|1|^HPV000001||^^^ALL||||||||O
+L|1|N</pre>
+<p>Antwoordt het LIS met een orderbericht (P- en O-records), dan verschijnt dat bij <span class="ui">Received from LIS</span>.
+Als <span class="ui">Add orders received from LIS to list</span> aanstaat, wordt het monster met de patiëntgegevens aan de lijst
+toegevoegd of bijgewerkt (status <em>Ordered by LIS</em>). Nieuwe monsters krijgen een uitslag volgens het scenario dat op dat moment is gekozen.
+Daarna kunt u de resultaten versturen.</p>
+<p>Het LIS kan orders ook ongevraagd sturen (download van de werklijst). Die worden op dezelfde manier verwerkt.</p>
+
+<!-- 11 -->
+<h2 id="editor">11. Message editor</h2>
+<p>Met de Message editor hebt u volledige controle over de inhoud van een bericht:</p>
+<ol class="steps">
+  <li>Klik op <span class="ui">Build results for selected</span> of <span class="ui">Build host query</span> om een bericht op te bouwen voor de geselecteerde monsters.</li>
+  <li>Pas de tekst naar wens aan. Elke regel is één record. Lege regels worden genegeerd.</li>
+  <li>Klik op <span class="ui">Send this message</span>. De tekst wordt precies zo in frames verpakt en verstuurd.</li>
+</ol>
+<p>Zo test u bijvoorbeeld afwijkende veldwaarden, ontbrekende records, foutieve sequentienummers of de berichtopbouw uit de officiële BD-specificatie.</p>
+<div class="note">De emulator past hier geen escape-tekens toe. Wilt u in een veld letterlijk een <code>|</code>, <code>^</code>, <code>\</code> of <code>&amp;</code> versturen,
+gebruik dan de escape-reeksen <code>&amp;F&amp;</code>, <code>&amp;S&amp;</code>, <code>&amp;R&amp;</code> en <code>&amp;E&amp;</code>.</div>
+
+<!-- 12 -->
+<h2 id="ontvangen">12. Ontvangen berichten (tabblad Received from LIS)</h2>
+<p>Hier staan alle complete berichten die van het LIS zijn ontvangen, het nieuwste bovenaan. Links ziet u het tijdstip, het aantal
+records en de recordtypen (bijvoorbeeld <code>H P O L</code>). Rechts ziet u de volledige inhoud van het geselecteerde bericht.
+Met <span class="ui">Clear</span> leegt u de lijst.</p>
+
+<!-- 13 -->
+<h2 id="log">13. Communicatielog</h2>
+<p>De log toont al het verkeer op de lijn. Stuurtekens zijn zichtbaar gemaakt, bijvoorbeeld <code>&lt;STX&gt;</code>, <code>&lt;CR&gt;</code> en <code>&lt;ETX&gt;</code>.</p>
+<table>
+  <tr><th>Richting</th><th>Kleur</th><th>Betekenis</th></tr>
+  <tr><td><code>Tx</code></td><td class="tx">blauw</td><td>Verstuurd door de emulator</td></tr>
+  <tr><td><code>Rx</code></td><td class="rx">groen</td><td>Ontvangen van het LIS</td></tr>
+  <tr><td><code>Info</code></td><td>grijs</td><td>Statusmelding (verbinding, bericht verstuurd, enzovoort)</td></tr>
+  <tr><td><code>Warn</code></td><td>oranje</td><td>Waarschuwing (bijvoorbeeld een foutief frame ontvangen of een verbroken verbinding)</td></tr>
+  <tr><td><code>Error</code></td><td>rood</td><td>Fout (time-out, versturen mislukt, verbinding mislukt)</td></tr>
+</table>
+<p>Een geslaagde overdracht ziet er zo uit:</p>
+<pre><span class="tx">Tx  &lt;ENQ&gt;</span>
+<span class="rx">Rx  &lt;ACK&gt;</span>
+<span class="tx">Tx  &lt;STX&gt;1H|\^&amp;|||BD Viper LT^VLT0001^3.0|||||LIS||P|LIS2-A2|20261114163509&lt;CR&gt;&lt;ETX&gt;E0&lt;CR&gt;&lt;LF&gt;</span>
+<span class="rx">Rx  &lt;ACK&gt;</span>
+<span class="tx">Tx  &lt;STX&gt;2P|1|PAT193791|||Bakker^Iris||19970307|F&lt;CR&gt;&lt;ETX&gt;F5&lt;CR&gt;&lt;LF&gt;</span>
+<span class="rx">Rx  &lt;ACK&gt;</span>
+     …
+<span class="tx">Tx  &lt;EOT&gt;</span></pre>
+<ul>
+  <li><span class="ui">Auto-scroll</span>: houdt automatisch de nieuwste regel in beeld.</li>
+  <li><span class="ui">Copy</span> (of <kbd>Ctrl</kbd>+<kbd>C</kbd> in de log): kopieert de geselecteerde regels naar het klembord, of alle regels als er niets is geselecteerd.</li>
+  <li><span class="ui">Save...</span>: slaat de log op als tekstbestand, bijvoorbeeld om bij een testrapport te voegen.</li>
+  <li><span class="ui">Clear</span>: leegt de log.</li>
+</ul>
+<p>De log bewaart de laatste 5000 regels.</p>
+
+<!-- 14 -->
+<h2 id="foutsimulatie">14. Foutsimulatie</h2>
+<p>Onder <span class="ui">Error injection</span> (tabblad Connection) kunt u testen hoe het LIS met transmissiefouten omgaat.
+Deze opties werken direct, ook als er al een verbinding is.</p>
+<table>
+  <tr><th>Optie</th><th>Wat gebeurt er</th><th>Verwacht gedrag van het LIS</th></tr>
+  <tr><td><span class="ui">Bad checksum on first frame (1st try)</span></td>
+      <td>Het eerste frame van elk bericht gaat de eerste keer met een foutieve checksum de lijn op.</td>
+      <td>Het LIS antwoordt met NAK. De emulator verstuurt het frame daarna opnieuw, correct, en het LIS antwoordt met ACK.</td></tr>
+  <tr><td><span class="ui">NAK first frame received from LIS</span></td>
+      <td>De emulator weigert het eerste frame van elk bericht dat van het LIS komt.</td>
+      <td>Het LIS verstuurt hetzelfde frame (met hetzelfde framenummer) opnieuw.</td></tr>
+</table>
+<p>Andere situaties kunt u met de bestaande functies nabootsen. Een time-out test u door het LIS te stoppen of te pauzeren tijdens een overdracht.
+Afwijkende berichten maakt u met de <a href="#editor">Message editor</a>, en ETB-vervolgframes forceert u met een lage <span class="ui">Max text per frame</span>.</p>
+
+<!-- 15 -->
+<h2 id="autosend">15. Automatisch versturen</h2>
+<p>Vink in de werkbalk <span class="ui">Auto-send random specimens</span> aan. De emulator maakt dan elk interval (zie
+<span class="ui">Auto-send interval (s)</span>) een nieuw monster met het scenario <code>Random</code> aan en verstuurt het direct.
+Dit is handig voor duur- en belastingtests van de koppeling. Automatisch versturen stopt bij <span class="ui">Disconnect</span>.</p>
+
+<!-- 16 -->
+<h2 id="simulator">16. LIS-simulator</h2>
+<p>Bij de emulator hoort een eenvoudig LIS voor de opdrachtregel. Het accepteert alle berichten, toont de ontvangen records en
+beantwoordt host queries automatisch met een order per opgevraagd monster.</p>
+<h3>De simulator luistert, de emulator maakt verbinding</h3>
+<pre>dotnet run --project tools/LisSimulator -- 5000</pre>
+<p>Kies in de emulator <code>TcpClient</code> met host <code>127.0.0.1</code> en poort <code>5000</code>, en klik op <span class="ui">Connect</span>.</p>
+<h3>De emulator luistert, de simulator maakt verbinding</h3>
+<p>Kies in de emulator <code>TcpServer</code> met poort <code>5000</code>, klik op <span class="ui">Connect</span> en start dan:</p>
+<pre>dotnet run --project tools/LisSimulator -- --connect 127.0.0.1:5000</pre>
+<p>Met <kbd>Ctrl</kbd>+<kbd>C</kbd> stopt u de simulator.</p>
+
+<!-- 17 -->
+<h2 id="bericht">17. Opbouw van het bericht</h2>
+<p>Scheidingstekens: veld <code>|</code>, herhaling <code>\</code>, component <code>^</code>, escape <code>&amp;</code>.
+Een resultaatbericht voor één monster dat positief is voor HPV 16 ziet er met de standaardinstellingen zo uit:</p>
+<pre>H|\^&amp;|||BD Viper LT^VLT0001^3.0|||||LIS||P|LIS2-A2|20261114103000
+P|1|P1|||Doe^Jane||19800101|F
+O|1|HPV000042|R01^3|^^^HPV|R||||||||||Cervical|||||||20261114103000|||F
+R|1|^^^HPV16|POS|||||F||OPERATOR|20261114080000|20261114103000|BD Viper LT^VLT0001
+R|2|^^^HPV16^CT|27.3|||||F||OPERATOR|20261114080000|20261114103000|BD Viper LT^VLT0001
+R|3|^^^HPV18|NEG|||||F||OPERATOR|20261114080000|20261114103000|BD Viper LT^VLT0001
+…  (HPV45, 31, 51, 52, 33/58, 35/39/68, 56/59/66)
+R|11|^^^BC|POS|||||F||OPERATOR|20261114080000|20261114103000|BD Viper LT^VLT0001
+R|12|^^^BC^CT|24.0|||||F||OPERATOR|20261114080000|20261114103000|BD Viper LT^VLT0001
+R|13|^^^HPV|POS|||||F||OPERATOR|20261114080000|20261114103000|BD Viper LT^VLT0001
+L|1|N</pre>
+
+<h3>Belangrijkste velden</h3>
+<table>
+  <tr><th>Record</th><th>Veld</th><th>Inhoud</th></tr>
+  <tr><td rowspan="5">H</td><td>H.2</td><td>Scheidingstekens <code>\^&amp;</code></td></tr>
+  <tr><td>H.5</td><td>Afzender: naam^serienummer^softwareversie</td></tr>
+  <tr><td>H.10</td><td>Ontvanger</td></tr>
+  <tr><td>H.12 / H.13</td><td>Processing ID / versie</td></tr>
+  <tr><td>H.14</td><td>Datum en tijd van het bericht (<code>JJJJMMDDuummss</code>)</td></tr>
+  <tr><td rowspan="2">P</td><td>P.2 / P.3</td><td>Volgnummer / patiëntnummer</td></tr>
+  <tr><td>P.6 / P.8 / P.9</td><td>Achternaam^voornaam / geboortedatum / geslacht</td></tr>
+  <tr><td rowspan="6">O</td><td>O.3</td><td>Monsternummer (specimen ID)</td></tr>
+  <tr><td>O.4</td><td>Rek^positie op het instrument</td></tr>
+  <tr><td>O.5</td><td>Test: <code>^^^HPV</code></td></tr>
+  <tr><td>O.6</td><td>Prioriteit (<code>R</code> = routine)</td></tr>
+  <tr><td>O.16 / O.23</td><td>Monstertype / tijdstip van rapportage</td></tr>
+  <tr><td>O.26</td><td>Rapporttype (<code>F</code> = definitief)</td></tr>
+  <tr><td rowspan="5">R</td><td>R.2</td><td>Volgnummer binnen de order (1, 2, 3 …)</td></tr>
+  <tr><td>R.3</td><td>Test: <code>^^^HPV16</code>, of <code>^^^HPV16^CT</code> voor de Ct-waarde</td></tr>
+  <tr><td>R.4</td><td>Uitslag: <code>POS</code>, <code>NEG</code>, <code>IND</code>, <code>INV</code> of een Ct-waarde</td></tr>
+  <tr><td>R.9 / R.11</td><td>Resultaatstatus (<code>F</code> = definitief) / gebruiker</td></tr>
+  <tr><td>R.12 / R.13 / R.14</td><td>Start- en eindtijd van de test / instrument</td></tr>
+  <tr><td>C</td><td>C.3 / C.4 / C.5</td><td>Bron (<code>I</code> = instrument) / tekst / type (<code>G</code> = algemeen)</td></tr>
+  <tr><td>Q</td><td>Q.3 / Q.5 / Q.13</td><td><code>^monsternummer</code> / <code>^^^ALL</code> / <code>O</code> = orders opvragen</td></tr>
+  <tr><td>L</td><td>L.3</td><td><code>N</code> = normale afsluiting</td></tr>
+</table>
+<p>Bij meerdere monsters in één bericht (batch) herhaalt het blok P, O, C, R zich per monster, met een oplopend P-volgnummer.</p>
+
+<!-- 18 -->
+<h2 id="protocol">18. Protocol (laag niveau)</h2>
+<h3>Frame-opbouw</h3>
+<pre>&lt;STX&gt; FN tekst &lt;ETB|ETX&gt; C1 C2 &lt;CR&gt;&lt;LF&gt;</pre>
+<ul>
+  <li><strong>FN</strong>: framenummer. Het eerste frame van een bericht is 1, daarna 2 … 7, 0, 1 … (modulo 8).</li>
+  <li><strong>tekst</strong>: maximaal 240 tekens. Elk record eindigt met <code>&lt;CR&gt;</code>.</li>
+  <li><strong>ETB</strong>: het record gaat verder in het volgende frame. <strong>ETX</strong>: laatste frame van het record.</li>
+  <li><strong>C1 C2</strong>: checksum, de som van alle bytes van FN tot en met ETB/ETX, modulo 256, als twee hexadecimale tekens.</li>
+</ul>
+<h3>Verloop van een overdracht</h3>
+<ol>
+  <li><strong>Opbouw:</strong> de emulator stuurt <code>ENQ</code> en het LIS antwoordt met <code>ACK</code>.
+      <ul>
+        <li>Antwoordt het LIS met <code>NAK</code> (bezet), dan probeert de emulator het na 10 seconden opnieuw, maximaal 6 keer.</li>
+        <li>Stuurt het LIS tegelijk ook <code>ENQ</code> (lijnconflict), dan heeft het instrument voorrang. De emulator wacht 1 seconde en stuurt opnieuw <code>ENQ</code>; het LIS moet dan wijken.</li>
+        <li>Komt er binnen de reply-time-out geen antwoord, dan stuurt de emulator <code>EOT</code> en is het versturen mislukt.</li>
+      </ul></li>
+  <li><strong>Overdracht:</strong> de emulator stuurt de frames één voor één. Na elk frame wacht hij op een antwoord.
+      <ul>
+        <li><code>ACK</code>: het volgende frame wordt verstuurd.</li>
+        <li><code>NAK</code>: hetzelfde frame wordt opnieuw verstuurd, maximaal 6 pogingen in totaal; daarna breekt de emulator af met <code>EOT</code>.</li>
+        <li><code>EOT</code>: het LIS vraagt om onderbreking. De emulator behandelt dit als een ACK en maakt het bericht af.</li>
+      </ul></li>
+  <li><strong>Afsluiting:</strong> de emulator stuurt <code>EOT</code>. De lijn is weer vrij.</li>
+</ol>
+<h3>Ontvangen van het LIS</h3>
+<p>Op een <code>ENQ</code> van het LIS antwoordt de emulator met <code>ACK</code>. Daarna controleert hij elk frame op checksum en framenummer:</p>
+<ul>
+  <li>Een correct frame krijgt een <code>ACK</code>.</li>
+  <li>Een foutief frame krijgt een <code>NAK</code>.</li>
+  <li>Een herhaald frame (hetzelfde nummer als het vorige) krijgt een <code>ACK</code>, maar de inhoud wordt genegeerd.</li>
+</ul>
+<p>Na <code>EOT</code> wordt het bericht samengesteld en getoond. Komt er binnen de receive-time-out geen frame, dan wordt het bericht verworpen.</p>
+
+<!-- 19 -->
+<h2 id="problemen">19. Problemen oplossen</h2>
+<table>
+  <tr><th>Probleem</th><th>Mogelijke oorzaak en oplossing</th></tr>
+  <tr><td><em>Connection failed: … actively refused</em></td><td>Er luistert niets op dat adres en die poort. Controleer of het LIS draait, of host en poort kloppen en of de Windows Firewall de verbinding niet blokkeert.</td></tr>
+  <tr><td>In servermodus maakt het LIS geen verbinding</td><td>Controleer of de poort niet al door een ander programma wordt gebruikt (zie de log) en of de firewall inkomende verbindingen op die poort toestaat. Windows vraagt daar bij de eerste keer soms om.</td></tr>
+  <tr><td>Seriële poort opent niet</td><td>De poort bestaat niet of is al in gebruik door een ander programma. Klik op ↻ en kies de juiste poort.</td></tr>
+  <tr><td>Seriële verbinding, maar onleesbare tekens of geen ACK</td><td>De baudrate, databits, pariteit of stopbits verschillen van die van het LIS, of de kabel is niet geschikt (een nul-modemkabel kan nodig zijn).</td></tr>
+  <tr><td><em>No reply to ENQ within 15 s</em></td><td>Het LIS reageert niet op ASTM-niveau. Het kan zijn dat het een ander protocol verwacht (bijvoorbeeld HL7 of ASTM zonder frames), of dat het niet in ontvangstmodus staat.</td></tr>
+  <tr><td>Het LIS stuurt herhaaldelijk <code>NAK</code> op frames</td><td>Het LIS berekent de checksum anders of verwacht een ander frame-formaat. Probeer <span class="ui">Each record starts a new frame</span> uit te zetten of een andere <span class="ui">Max text per frame</span>, en vergelijk de log met de verwachting van het LIS.</td></tr>
+  <tr><td>Uitslagen komen niet goed in het LIS terecht</td><td>De testcodes of resultaatwaarden komen niet overeen. Pas de codes aan op het tabblad <span class="ui">Assay targets</span>, of de assay-code en de Ct-rapportage op het tabblad <span class="ui">Instrument &amp; message</span>.</td></tr>
+  <tr><td>De knoppen voor versturen zijn grijs</td><td>Er is geen verbinding (het statuslampje is niet groen), of er is geen monster geselecteerd.</td></tr>
+  <tr><td>Instellingen zijn niet te wijzigen</td><td>Verbindingsinstellingen zijn geblokkeerd zolang er een verbinding is. Klik eerst op <span class="ui">Disconnect</span>.</td></tr>
+</table>
+
+<!-- 20 -->
+<h2 id="bestanden">20. Bestanden en opdrachtregel</h2>
+<h3>Bestanden</h3>
+<table>
+  <tr><th>Bestand</th><th>Inhoud</th></tr>
+  <tr><td><code>%APPDATA%\ViperAstmEmulator\settings.json</code></td><td>Alle instellingen. Ze worden bij het afsluiten opgeslagen en bij het starten geladen. Verwijder dit bestand om terug te gaan naar de standaardinstellingen.</td></tr>
+  <tr><td><code>%APPDATA%\ViperAstmEmulator\crash.log</code></td><td>Technische details van onverwachte fouten. Voeg dit bestand toe als u een probleem meldt.</td></tr>
+</table>
+<p>De monsterlijst wordt <em>niet</em> bewaard. Bij elke start begint de emulator met vijf nieuwe willekeurige monsters.</p>
+<h3>Opdrachtregel</h3>
+<table>
+  <tr><th>Optie</th><th>Werking</th></tr>
+  <tr><td><code>--connect</code></td><td>Direct verbinden met de opgeslagen instellingen</td></tr>
+  <tr><td><code>--send-all</code></td><td>Na het verbinden alle monsters versturen (alleen samen met <code>--connect</code>)</td></tr>
+  <tr><td><code>--auto-send</code></td><td>Na het verbinden automatisch versturen starten (alleen samen met <code>--connect</code>)</td></tr>
+</table>
+<pre>ViperAstmEmulator.exe --connect --auto-send</pre>
+</main>
+</div>
+</body>
+</html>
