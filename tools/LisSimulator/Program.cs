@@ -6,6 +6,16 @@ using ViperAstmEmulator.Core.Astm;
 //   LisSimulator [port]                 listen on port (default 5000)
 //   LisSimulator --connect host:port    connect to an emulator running in TCP server mode
 // Replies to host queries (Q records) with an order for each queried specimen.
+//
+//   LisSimulator --hl7 [port] [--send-order]   HL7 v2 (MLLP) LIS on port (default 2575):
+//                                              prints messages, answers ACK AA, and with --send-order
+//                                              sends one OML^O21 order after the first message received.
+
+if (args.Contains("--hl7"))
+{
+    await Hl7Mode.RunAsync(args);
+    return;
+}
 
 string? connect = null;
 int port = 5000;
@@ -97,5 +107,68 @@ static void Print(ConsoleColor color, string text)
         Console.ForegroundColor = color;
         Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} {text}");
         Console.ResetColor();
+    }
+}
+
+static class Hl7Mode
+{
+    public static async Task RunAsync(string[] args)
+    {
+        int port = args.Select(a => int.TryParse(a, out var p) ? p : 0).FirstOrDefault(p => p > 0, 2575);
+        bool sendOrder = args.Contains("--send-order");
+        using var cts = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+
+        var settings = new Hl7Emulator.Core.Hl7Settings { SendingApplication = "LIS", SendingFacility = "HOSPITAL", ReceivingApplication = "HL7EMU", ReceivingFacility = "LAB" };
+        var factory = new Hl7Emulator.Core.Hl7v2.Hl7MessageFactory(settings);
+        var listener = new TcpListener(IPAddress.Any, port);
+        listener.Start();
+        Print(ConsoleColor.Gray, $"HL7 LIS simulator (MLLP) listening on port {port} (Ctrl+C to quit)");
+
+        while (!cts.IsCancellationRequested)
+        {
+            TcpClient client;
+            try { client = await listener.AcceptTcpClientAsync(cts.Token); }
+            catch (OperationCanceledException) { break; }
+            Print(ConsoleColor.Gray, $"Connected: {client.Client.RemoteEndPoint}");
+            var conn = new Hl7Emulator.Core.Hl7v2.MllpConnection(client.GetStream(), new Hl7Emulator.Core.Hl7v2.MllpOptions
+            {
+                AckBuilder = m => factory.Ack(m, Hl7Emulator.Core.AutoAckMode.Accept),
+            });
+            conn.Log += e => Print(e.Direction switch
+            {
+                LogDirection.Tx => ConsoleColor.Cyan,
+                LogDirection.Rx => ConsoleColor.Green,
+                LogDirection.Warn => ConsoleColor.Yellow,
+                LogDirection.Error => ConsoleColor.Red,
+                _ => ConsoleColor.Gray,
+            }, $"{e.Direction,-5} {e.Text}");
+            bool orderSent = false;
+            conn.MessageReceived += (m, raw) =>
+            {
+                if (!sendOrder || orderSent) return;
+                orderSent = true;
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(500);
+                    var order = new ViperAstmEmulator.Core.Viper.Sample { SpecimenId = "LIS000777", PatientId = "PAT777", LastName = "Order", FirstName = "Test", BirthDate = "19850505", Sex = "F" };
+                    var r = await conn.SendAsync(factory.Build(Hl7Emulator.Core.Hl7v2.Hl7MessageKind.OmlO21, order), waitForAck: true);
+                    Print(ConsoleColor.Magenta, $"Order LIS000777 sent: {r.Summary}");
+                });
+            };
+            await conn.RunAsync(cts.Token);
+            Print(ConsoleColor.Gray, "Connection ended");
+        }
+        listener.Stop();
+    }
+
+    static void Print(ConsoleColor color, string text)
+    {
+        lock (Console.Out)
+        {
+            Console.ForegroundColor = color;
+            Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} {text}");
+            Console.ResetColor();
+        }
     }
 }

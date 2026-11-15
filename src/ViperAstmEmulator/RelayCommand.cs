@@ -36,7 +36,7 @@ public sealed class RelayCommand : ICommand
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Viper ASTM Emulator", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ex.Message, "Lab Interface Emulator", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {

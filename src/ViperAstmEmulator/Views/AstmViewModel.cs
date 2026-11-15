@@ -7,15 +7,16 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using ViperAstmEmulator.Core.Astm;
 using ViperAstmEmulator.Core.Viper;
+using ViperAstmEmulator;
 
-namespace ViperAstmEmulator;
+namespace ViperAstmEmulator.Views;
 
 public sealed record ReceivedMessage(DateTime Time, string Summary, string Text)
 {
     public string Title => $"{Time:HH:mm:ss}  {Summary}";
 }
 
-public sealed class MainViewModel : ObservableObject
+public sealed class AstmViewModel : ObservableObject
 {
     private const int MaxLogEntries = 5000;
 
@@ -59,7 +60,7 @@ public sealed class MainViewModel : ObservableObject
     private string[] _comPorts = SerialPort.GetPortNames();
     public string[] ComPorts { get => _comPorts; private set => Set(ref _comPorts, value); }
 
-    public MainViewModel()
+    public AstmViewModel()
     {
         Settings = EmulatorSettings.Load();
         _factory = new SampleFactory(Settings);

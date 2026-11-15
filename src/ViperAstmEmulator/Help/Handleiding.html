@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Handleiding Viper ASTM Emulator</title>
+<title>Handleiding Lab Interface Emulator</title>
 <style>
   :root {
     --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --accent: #1565c0;
@@ -89,15 +89,32 @@
     <li><a href="#problemen">Problemen oplossen</a></li>
     <li><a href="#bestanden">Bestanden en opdrachtregel</a></li>
   </ol>
+  <div class="title" style="margin-top:18px">HL7 v2 / FHIR</div>
+  <ol start="21">
+    <li><a href="#hl7-overzicht">Overzicht</a></li>
+    <li><a href="#hl7-verbinding">HL7 v2-verbinding</a></li>
+    <li><a href="#hl7-versturen">HL7 v2 versturen</a></li>
+    <li><a href="#fhir-versturen">FHIR versturen</a></li>
+    <li><a href="#lis-ontvangen">Ontvangen van het LIS</a></li>
+    <li><a href="#hl7-opbouw">Opbouw HL7 v2 en FHIR</a></li>
+    <li><a href="#hl7-testen">Testen en problemen oplossen</a></li>
+  </ol>
 </nav>
 
 <main>
-<h1>Viper ASTM Emulator</h1>
-<p class="subtitle">Gebruikershandleiding — emulatie van een BD Viper LT die BD Onclarity HPV-resultaten via ASTM naar een LIS verstuurt</p>
+<h1>Lab Interface Emulator</h1>
+<p class="subtitle">Gebruikershandleiding — BD Onclarity HPV-resultaten naar een LIS sturen via ASTM (BD Viper LT), HL7 v2 en FHIR, en berichten van het LIS ontvangen</p>
 
 <!-- 1 -->
 <h2 id="inleiding">1. Inleiding</h2>
-<p>De Viper ASTM Emulator gedraagt zich als een <strong>BD Viper LT</strong>-analyzer. Hij verstuurt
+<p>De Lab Interface Emulator heeft twee tabbladen bovenin het venster:</p>
+<ul>
+  <li><span class="ui">ASTM (BD Viper LT)</span>: emulatie van een BD Viper LT via ASTM. Dit deel wordt beschreven in hoofdstuk 1 tot en met 20.</li>
+  <li><span class="ui">HL7 v2 / FHIR</span>: berichten versturen naar en ontvangen van een LIS via HL7 v2 (MLLP) en FHIR R4 (REST). Zie hoofdstuk <a href="#hl7-overzicht">21</a> en verder.</li>
+</ul>
+<p>Beide tabbladen werken onafhankelijk van elkaar, met elk een eigen monsterlijst, eigen instellingen en een eigen communicatielog.
+U kunt ze tegelijk gebruiken.</p>
+<p>Het ASTM-deel gedraagt zich als een <strong>BD Viper LT</strong>-analyzer. Hij verstuurt
 <strong>BD Onclarity HPV</strong>-resultaten (genotypering) naar een laboratoriuminformatiesysteem (LIS). Zo kunt u een
 LIS-koppeling ontwikkelen, testen en valideren zonder dat er een echt instrument nodig is.</p>
 <p>De emulator ondersteunt:</p>
@@ -506,6 +523,7 @@ L|1|N</pre>
 <table>
   <tr><th>Bestand</th><th>Inhoud</th></tr>
   <tr><td><code>%APPDATA%\ViperAstmEmulator\settings.json</code></td><td>Alle instellingen. Ze worden bij het afsluiten opgeslagen en bij het starten geladen. Verwijder dit bestand om terug te gaan naar de standaardinstellingen.</td></tr>
+  <tr><td><code>%APPDATA%\Hl7Emulator\settings.json</code></td><td>Instellingen van het tabblad HL7 v2 / FHIR.</td></tr>
   <tr><td><code>%APPDATA%\ViperAstmEmulator\crash.log</code></td><td>Technische details van onverwachte fouten. Voeg dit bestand toe als u een probleem meldt.</td></tr>
 </table>
 <p>De monsterlijst wordt <em>niet</em> bewaard. Bij elke start begint de emulator met vijf nieuwe willekeurige monsters.</p>
@@ -517,6 +535,216 @@ L|1|N</pre>
   <tr><td><code>--auto-send</code></td><td>Na het verbinden automatisch versturen starten (alleen samen met <code>--connect</code>)</td></tr>
 </table>
 <pre>ViperAstmEmulator.exe --connect --auto-send</pre>
+<p>Opties voor het tabblad HL7 v2 / FHIR staan in <a href="#hl7-testen">hoofdstuk 27</a>.</p>
+
+<!-- ===================== HL7 v2 / FHIR ===================== -->
+
+<!-- 21 -->
+<h2 id="hl7-overzicht">21. HL7 v2 / FHIR: overzicht</h2>
+<p>Op het tabblad <span class="ui">HL7 v2 / FHIR</span> verstuurt u dezelfde HPV-resultaten (en orders en patiëntgegevens)
+via de twee meest gebruikte zorgstandaarden. U kunt ook berichten van het LIS ontvangen.</p>
+<table>
+  <tr><th></th><th>HL7 v2</th><th>FHIR R4</th></tr>
+  <tr><td>Transport</td><td>MLLP over TCP (standaardpoort 2575)</td><td>HTTP(S) REST met JSON</td></tr>
+  <tr><td>Versturen naar het LIS</td><td>Via een TCP-verbinding (de emulator als client of als server)</td><td>HTTP-verzoeken naar de FHIR-basis-URL van het LIS</td></tr>
+  <tr><td>Ontvangen van het LIS</td><td>Over dezelfde TCP-verbinding; de emulator antwoordt automatisch met een ACK</td><td>Via de ingebouwde FHIR-server van de emulator, waar het LIS naartoe stuurt</td></tr>
+  <tr><td>Bevestiging</td><td>ACK met MSA-1 = AA, AE of AR</td><td>HTTP-statuscode (200/201, of 4xx/5xx met een OperationOutcome)</td></tr>
+</table>
+<p>Het scherm is opgebouwd zoals het ASTM-tabblad. Links staan de instellingen (<span class="ui">HL7 v2 / MLLP</span>,
+<span class="ui">FHIR</span> en <span class="ui">Content</span>), bovenaan de werkbalk met de verbindingsstatus, in het midden de tabbladen
+<span class="ui">Specimens</span>, <span class="ui">HL7 v2 message</span>, <span class="ui">FHIR request</span> en
+<span class="ui">Received from LIS</span>, en onderaan de communicatielog.</p>
+<p>Monsters, scenario's en uitslagen werken precies zoals beschreven in <a href="#specimens">hoofdstuk 8</a>.</p>
+
+<!-- 22 -->
+<h2 id="hl7-verbinding">22. HL7 v2-verbinding (tabblad HL7 v2 / MLLP)</h2>
+<h3>Connection (MLLP over TCP)</h3>
+<table>
+  <tr><th>Instelling</th><th>Uitleg</th></tr>
+  <tr><td><span class="ui">Mode</span></td><td><code>Client</code>: de emulator maakt verbinding met het LIS. <code>Server</code>: de emulator luistert en het LIS maakt verbinding.</td></tr>
+  <tr><td><span class="ui">LIS host</span> / <span class="ui">Bind address</span></td><td>Adres van het LIS (client) of het netwerkadres waarop de emulator luistert (server; leeg = alle netwerkkaarten).</td></tr>
+  <tr><td><span class="ui">Port</span></td><td>TCP-poort. 2575 is de geregistreerde HL7-poort.</td></tr>
+  <tr><td><span class="ui">Auto-reconnect</span></td><td>Bij Client: elke 3 seconden opnieuw verbinden als de verbinding wegvalt.</td></tr>
+  <tr><td><span class="ui">Character set</span></td><td>Tekencodering op de lijn: UTF-8 of ISO-8859-1. Gebruik dezelfde codering als het LIS, anders komen letters als ë en ü verkeerd aan.</td></tr>
+</table>
+<p>Klik in de werkbalk op <span class="ui">Connect HL7</span>. Het lampje wordt groen zodra de verbinding er is.</p>
+<h3>Acknowledgements</h3>
+<table>
+  <tr><th>Instelling</th><th>Uitleg</th></tr>
+  <tr><td><span class="ui">Wait for ACK after sending</span></td><td>Na elk verstuurd bericht wachten op de ACK van het LIS. De ACK wordt gekoppeld via het bericht-ID (MSH-10 in ons bericht = MSA-2 in de ACK).</td></tr>
+  <tr><td><span class="ui">ACK timeout (s)</span></td><td>Hoe lang de emulator op de ACK wacht. Komt die niet, dan geldt het versturen als mislukt.</td></tr>
+  <tr><td><span class="ui">Reply to LIS with</span></td><td>Het antwoord op berichten die het LIS stuurt:
+    <code>AA</code> (geaccepteerd), <code>AE</code> (applicatiefout), <code>AR</code> (geweigerd) of <code>None</code> (geen antwoord;
+    hiermee test u de time-out van het LIS). Een wijziging werkt direct, ook tijdens een verbinding.</td></tr>
+</table>
+<h3>Message header (MSH)</h3>
+<table>
+  <tr><th>Instelling</th><th>Veld</th><th>Uitleg</th></tr>
+  <tr><td><span class="ui">HL7 version</span></td><td>MSH-12</td><td>2.3.1, 2.4, 2.5, 2.5.1 (standaard) of 2.6. Vanaf 2.5 wordt het monster in een SPM-segment gezet; bij oudere versies komt het monstertype in OBR-15 en worden coderingen als CE in plaats van CWE verstuurd.</td></tr>
+  <tr><td><span class="ui">Sending application / facility</span></td><td>MSH-3 / MSH-4</td><td>Afzender (de emulator).</td></tr>
+  <tr><td><span class="ui">Receiving application / facility</span></td><td>MSH-5 / MSH-6</td><td>Ontvanger (het LIS). Veel LIS-systemen controleren deze waarden.</td></tr>
+  <tr><td><span class="ui">Processing ID</span></td><td>MSH-11</td><td><code>P</code> = productie, <code>T</code> = training, <code>D</code> = debug.</td></tr>
+  <tr><td><span class="ui">Character set in MSH-18</span></td><td>MSH-18</td><td>De tekencodering ook in het bericht vermelden.</td></tr>
+</table>
+
+<!-- 23 -->
+<h2 id="hl7-versturen">23. HL7 v2-berichten versturen</h2>
+<p>Kies op het tabblad <span class="ui">Specimens</span>, in de balk boven de monsterlijst, bij <span class="ui">HL7 v2</span> een berichttype.
+Selecteer een of meer monsters en klik op <span class="ui">Send via HL7</span>. Elk monster krijgt een eigen bericht. In de kolom
+<span class="ui">Status</span> ziet u het antwoord, bijvoorbeeld <em>HL7 AA</em>.</p>
+<table>
+  <tr><th>Berichttype</th><th>Wanneer gebruiken</th><th>Segmenten</th></tr>
+  <tr><td><code>ORU^R01</code></td><td>Laboratoriumuitslagen naar het LIS. Het meest gebruikte type.</td><td>MSH PID PV1 ORC OBR [NTE] OBX… [SPM]</td></tr>
+  <tr><td><code>OUL^R22</code></td><td>Uitslagen per monster, zoals een analyzer ze volgens het IHE LAW-profiel stuurt (v2.5+).</td><td>MSH PID PV1 SPM OBR ORC [NTE] OBX…</td></tr>
+  <tr><td><code>ORM^O01</code></td><td>Een nieuwe order (oudere stijl).</td><td>MSH PID PV1 ORC OBR [NTE]</td></tr>
+  <tr><td><code>OML^O21</code></td><td>Een laboratoriumorder met monstergegevens (v2.5-stijl).</td><td>MSH PID PV1 ORC OBR SPM [NTE]</td></tr>
+  <tr><td><code>ADT^A01</code></td><td>Opname of bezoek van een patiënt.</td><td>MSH EVN PID PV1</td></tr>
+  <tr><td><code>ADT^A04</code></td><td>Registratie van een (poliklinische) patiënt.</td><td>MSH EVN PID PV1</td></tr>
+  <tr><td><code>ADT^A08</code></td><td>Wijziging van patiëntgegevens.</td><td>MSH EVN PID PV1</td></tr>
+  <tr><td><code>QBP^Q11</code></td><td>Het LIS om de orders voor een monster vragen (werklijstquery volgens IHE LAW).</td><td>MSH QPD RCP</td></tr>
+</table>
+<h3>Tabblad HL7 v2 message</h3>
+<ol class="steps">
+  <li>Kies een berichttype en klik op <span class="ui">Build for selected specimen</span>.</li>
+  <li>Pas het bericht naar wens aan. Elke regel is één segment.</li>
+  <li>Klik op <span class="ui">Send this message</span>.</li>
+</ol>
+<p>Onder <span class="ui">Last acknowledgement</span> ziet u het antwoord van het LIS, met de volledige ACK.</p>
+<div class="note">Verstuurt u een aangepast bericht vaker, geef MSH-10 (het bericht-ID) dan steeds een nieuwe waarde. Anders kan de ACK niet aan het
+juiste bericht worden gekoppeld, en weigeren sommige LIS-systemen dubbele berichten.</div>
+<p>Op het tabblad <span class="ui">Content</span> stelt u de testcode en testnaam (OBR-4), het monstertype (dezelfde lijst als bij ASTM, zie
+<a href="#instrument">hoofdstuk 6</a>), de instrument-ID (OBX-18) en de te rapporteren onderdelen in: Ct-waarden, de BC-controle en de totaaluitslag.</p>
+
+<!-- 24 -->
+<h2 id="fhir-versturen">24. FHIR versturen</h2>
+<p>Vul op het tabblad <span class="ui">FHIR</span> (links) bij <span class="ui">LIS FHIR base URL</span> het basisadres van de FHIR-server van het LIS in,
+bijvoorbeeld <code>https://lis.voorbeeld.nl/fhir</code>. Heeft het LIS een token nodig, vul dan <span class="ui">Bearer token</span> in.</p>
+<div class="warn">Het token wordt onversleuteld opgeslagen in <code>settings.json</code>. Gebruik alleen tokens voor een testomgeving.</div>
+<p>Kies op het tabblad <span class="ui">Specimens</span> bij <span class="ui">FHIR</span> een verzoektype, selecteer monsters en klik op <span class="ui">Send via FHIR</span>.</p>
+<table>
+  <tr><th>Verzoektype</th><th>HTTP</th><th>Inhoud</th></tr>
+  <tr><td>Results (transaction)</td><td>POST [base]</td><td>Transaction-bundle met Patient, Specimen, ServiceRequest, een Observation per kanaal (plus de totaaluitslag) en een DiagnosticReport. Het LIS slaat alles in één keer op.</td></tr>
+  <tr><td>Results (FHIR message)</td><td>POST [base]/$process-message</td><td>Message-bundle met MessageHeader, DiagnosticReport, Observations, Patient, Specimen en ServiceRequest.</td></tr>
+  <tr><td>Order (transaction)</td><td>POST [base]</td><td>Transaction-bundle met Patient, Specimen en ServiceRequest (een nieuwe order).</td></tr>
+  <tr><td>DiagnosticReport only</td><td>POST [base]/DiagnosticReport</td><td>Eén DiagnosticReport met patiënt, monster en uitslagen als <em>contained</em> resources.</td></tr>
+  <tr><td>Patient</td><td>POST [base]/Patient</td><td>Alleen de patiënt.</td></tr>
+  <tr><td>Search open orders</td><td>GET [base]/ServiceRequest?status=active</td><td>Openstaande orders bij het LIS opvragen. Gevonden orders komen in de monsterlijst.</td></tr>
+  <tr><td>Capability statement</td><td>GET [base]/metadata</td><td>Snelle controle of de FHIR-server van het LIS bereikbaar is.</td></tr>
+</table>
+<h3>Tabblad FHIR request</h3>
+<p>Hier ziet en bewerkt u het volledige verzoek: de methode (POST/PUT/GET/DELETE), het pad achter de basis-URL en de JSON-inhoud.
+Klik op <span class="ui">Build for selected specimen</span> om een verzoek op te bouwen en op <span class="ui">Send this request</span> om het te versturen.
+Onderaan verschijnen de HTTP-status, de responsheaders en de inhoud van het antwoord, bijvoorbeeld een <code>transaction-response</code>
+of een <code>OperationOutcome</code> met de reden van een weigering.</p>
+<h3>Uitslagen in FHIR</h3>
+<ul>
+  <li>De uitslag staat in <code>Observation.valueCodeableConcept</code> met SNOMED CT: <code>10828004</code> Positive, <code>260385009</code> Negative en <code>82334004</code> Indeterminate. Een ongeldige uitslag wordt alleen als tekst (<code>Invalid</code>) verstuurd.</li>
+  <li><code>Observation.interpretation</code> bevat <code>POS</code>, <code>NEG</code> of <code>IND</code> (HL7 ObservationInterpretation).</li>
+  <li>De Ct-waarde staat als <code>component</code> met eenheid <code>{cycles}</code> (UCUM).</li>
+  <li>Testcodes en monstertypen gebruiken het lokale codesysteem uit de instelling <span class="ui">Local code system</span>.</li>
+</ul>
+<div class="note">De standaard-URI's onder <span class="ui">Code and identifier systems</span> beginnen met <code>http://example.org/</code>.
+Dat zijn plaatshouders. Vervang ze door de systemen die uw LIS verwacht (bijvoorbeeld de OID of URI van uw ziekenhuis voor patiëntnummers).
+LOINC-codes voor de HPV-genotypen zitten er niet standaard in. Gebruikt uw LIS die wel, pas dan de codes aan in de FHIR-editor.</div>
+
+<!-- 25 -->
+<h2 id="lis-ontvangen">25. Ontvangen van het LIS</h2>
+<h3>HL7 v2</h3>
+<p>Berichten die het LIS over de MLLP-verbinding stuurt (bijvoorbeeld een <code>ORM^O01</code>- of <code>OML^O21</code>-order, of een
+<code>RSP</code>-antwoord op een query), worden automatisch beantwoord volgens <span class="ui">Reply to LIS with</span>. Ze verschijnen
+op het tabblad <span class="ui">Received from LIS</span> met het kenmerk <em>[HL7 v2]</em>.</p>
+<h3>FHIR: de ingebouwde FHIR-server</h3>
+<p>Bij FHIR stuurt het LIS zelf HTTP-verzoeken. Daarvoor heeft de emulator een eenvoudige FHIR-server:</p>
+<ol class="steps">
+  <li>Stel op het tabblad <span class="ui">FHIR</span>, onder <span class="ui">Receive from LIS</span>, de host, poort en het basispad in (standaard <code>http://localhost:8090/fhir/</code>).</li>
+  <li>Klik in de werkbalk op <span class="ui">Start FHIR server</span>.</li>
+  <li>Laat het LIS verzoeken sturen naar dit adres.</li>
+</ol>
+<table>
+  <tr><th>Verzoek van het LIS</th><th>Antwoord van de emulator</th></tr>
+  <tr><td><code>GET [base]/metadata</code></td><td>200 met een CapabilityStatement</td></tr>
+  <tr><td><code>POST [base]</code> met een transaction- of batch-bundle</td><td>200 met een transaction-response (201 Created per entry)</td></tr>
+  <tr><td><code>POST [base]/$process-message</code> met een message-bundle</td><td>200 met een antwoordbericht (MessageHeader.response.code = ok)</td></tr>
+  <tr><td><code>POST [base]/[Type]</code></td><td>201 Created met een Location-header</td></tr>
+  <tr><td><code>PUT [base]/[Type]/[id]</code></td><td>201 (nieuw) of 200 (bijgewerkt)</td></tr>
+  <tr><td><code>GET [base]/[Type]/[id]</code> en <code>GET [base]/[Type]</code></td><td>De opgeslagen resource of een searchset met alle resources van dat type</td></tr>
+</table>
+<p>Met <span class="ui">Respond with</span> test u hoe het LIS met fouten omgaat: <code>Accept</code> (normaal), <code>400</code> (afwijzen met een
+OperationOutcome) of <code>500</code> (serverfout). De keuze werkt direct. Opgeslagen resources worden alleen in het geheugen bewaard en verdwijnen bij het afsluiten.</p>
+<div class="note">Met host <code>localhost</code> is de server alleen vanaf deze pc bereikbaar en zijn er geen beheerdersrechten nodig.
+Moet het LIS vanaf een andere computer verbinding maken, gebruik dan host <code>+</code> en registreer het adres eenmalig als beheerder:
+<pre>netsh http add urlacl url=http://+:8090/fhir/ user=%USERNAME%</pre>
+Sta de poort ook toe in de Windows Firewall.</div>
+<h3>Orders automatisch overnemen</h3>
+<p>Staat <span class="ui">Add orders received from LIS to list</span> aan (tabblad <span class="ui">Content</span>), dan worden ontvangen orders aan de monsterlijst
+toegevoegd, of bijgewerkt als het monsternummer al bestaat. Dat geldt voor HL7-orders (ORM, OML en RSP), voor ServiceRequests die het LIS naar de FHIR-server stuurt
+en voor het resultaat van <em>Search open orders</em>. De status wordt dan bijvoorbeeld <em>Ordered (HL7)</em>. Daarna kunt u direct de resultaten terugsturen.</p>
+<p>Het monsternummer wordt gezocht in SPM-2, OBR-3 of OBR-2 (HL7), of in Specimen.accessionIdentifier, Specimen.identifier of ServiceRequest.identifier (FHIR).</p>
+
+<!-- 26 -->
+<h2 id="hl7-opbouw">26. Opbouw HL7 v2 en FHIR</h2>
+<h3>Voorbeeld ORU^R01 (v2.5.1, HPV 16 positief)</h3>
+<pre>MSH|^~\&amp;|HL7EMU|LAB|LIS|HOSPITAL|20261115100000||ORU^R01^ORU_R01|20261115100000123001|P|2.5.1
+PID|1||PAT1^^^LAB^MR||Doe^Jane||19800101|F
+PV1|1|O
+ORC|RE|SPEC1|SPEC1||CM||||20261115100000
+OBR|1|SPEC1|SPEC1|HPV^HPV Onclarity genotyping^L|||20261114100000|||||||20261114140000||||||||20261115100000|||F
+OBX|1|CWE|HPV16^HPV 16^L||POS^Positive^L|||A|||F|||20261115100000||||BD Viper LT VLT0001|20261115100000
+OBX|2|NM|HPV16_CT^HPV 16 Ct^L||27.3|{cycles}|||||F|||20261115100000||||BD Viper LT VLT0001|20261115100000
+OBX|3|CWE|HPV18^HPV 18^L||NEG^Negative^L|||N|||F|||20261115100000||||BD Viper LT VLT0001|20261115100000
+…  (HPV45, 31, 51, 52, 33/58, 35/39/68, 56/59/66)
+OBX|11|CWE|BC^Beta-globin control (BC)^L||POS^Positive^L|||N|||F|||20261115100000||||BD Viper LT VLT0001|20261115100000
+OBX|12|NM|BC_CT^Beta-globin control (BC) Ct^L||23.4|{cycles}|||||F|||20261115100000||||BD Viper LT VLT0001|20261115100000
+OBX|13|CWE|HPV^HPV Onclarity genotyping interpretation^L||POS^Positive^L|||A|||F|||20261115100000||||BD Viper LT VLT0001|20261115100000
+SPM|1|SPEC1||Cervical^Cervical specimen, type not specified^L|||||||||||||20261114100000|20261114140000</pre>
+<p>De afwijkingsvlag in OBX-8 is <code>A</code> (afwijkend) bij een positief genotype en <code>N</code> (normaal) bij een negatief genotype.
+Voor de interne controle (BC) is het andersom: een positieve controle is normaal (<code>N</code>), een mislukte controle is afwijkend (<code>A</code>).</p>
+<table>
+  <tr><th>Gegeven</th><th>HL7 v2</th><th>FHIR</th></tr>
+  <tr><td>Monsternummer</td><td>OBR-2, OBR-3, ORC-2/3, SPM-2</td><td>Specimen.accessionIdentifier, ServiceRequest.identifier</td></tr>
+  <tr><td>Patiënt</td><td>PID-3 (nummer), PID-5 (naam), PID-7, PID-8</td><td>Patient.identifier, name, birthDate, gender</td></tr>
+  <tr><td>Test</td><td>OBR-4</td><td>ServiceRequest.code, DiagnosticReport.code</td></tr>
+  <tr><td>Monstertype</td><td>SPM-4 (v2.5+) of OBR-15</td><td>Specimen.type</td></tr>
+  <tr><td>Uitslag per kanaal</td><td>OBX (CWE/CE) met afwijkingsvlag A/N in OBX-8</td><td>Observation.valueCodeableConcept + interpretation</td></tr>
+  <tr><td>Ct-waarde</td><td>Extra OBX (NM) met code <code>CODE_CT</code></td><td>Observation.component (valueQuantity)</td></tr>
+  <tr><td>Totaaluitslag</td><td>OBX met de testcode</td><td>Extra Observation + DiagnosticReport.conclusion</td></tr>
+  <tr><td>Commentaar</td><td>NTE</td><td>Observation.note</td></tr>
+  <tr><td>Instrument</td><td>OBX-18</td><td>Observation.device</td></tr>
+</table>
+<h3>MLLP-framing</h3>
+<pre>&lt;VT&gt; MSH|…&lt;CR&gt; PID|…&lt;CR&gt; … &lt;FS&gt;&lt;CR&gt;</pre>
+<p>Elk bericht begint met <code>&lt;VT&gt;</code> (0x0B) en eindigt met <code>&lt;FS&gt;&lt;CR&gt;</code> (0x1C 0x0D). Segmenten worden gescheiden door <code>&lt;CR&gt;</code>.
+De communicatielog toont elk segment op een eigen regel.</p>
+
+<!-- 27 -->
+<h2 id="hl7-testen">27. Testen en problemen oplossen (HL7 v2 / FHIR)</h2>
+<h3>LIS-simulator in HL7-modus</h3>
+<p>De meegeleverde LIS-simulator kan ook als HL7 v2-LIS werken. Hij luistert op poort 2575, toont alle ontvangen berichten en antwoordt met <code>AA</code>.
+Met <code>--send-order</code> stuurt hij na het eerste ontvangen bericht één <code>OML^O21</code>-order (monster LIS000777) terug.</p>
+<pre>dotnet run --project tools/LisSimulator -- --hl7 2575 --send-order</pre>
+<p>Kies in de emulator Mode <code>Client</code>, host <code>127.0.0.1</code> en poort <code>2575</code>, en klik op <span class="ui">Connect HL7</span>.</p>
+<p>Voor FHIR kunt u de emulator met zichzelf testen. Start de FHIR-server en zet de <span class="ui">LIS FHIR base URL</span> op hetzelfde adres
+(<code>http://localhost:8090/fhir</code>). Alles wat u verstuurt, verschijnt dan bij <span class="ui">Received from LIS</span>.</p>
+<h3>Opdrachtregel</h3>
+<table>
+  <tr><th>Optie</th><th>Werking</th></tr>
+  <tr><td><code>--hl7-connect</code></td><td>Bij het starten de HL7-verbinding maken</td></tr>
+  <tr><td><code>--hl7-send-all</code></td><td>Verbinden en de uitslagen van alle monsters versturen met het gekozen berichttype</td></tr>
+  <tr><td><code>--fhir-server</code></td><td>Bij het starten de FHIR-server starten</td></tr>
+</table>
+<p>Met een van deze opties opent de emulator direct op het tabblad HL7 v2 / FHIR.</p>
+<h3>Problemen</h3>
+<table>
+  <tr><th>Probleem</th><th>Mogelijke oorzaak en oplossing</th></tr>
+  <tr><td><em>No ACK within 30 s</em></td><td>Het LIS stuurt geen ACK, of de ACK bevat in MSA-2 niet het bericht-ID (MSH-10) uit ons bericht. Controleer de log. Verwacht het LIS geen ACK-uitwisseling, zet dan <span class="ui">Wait for ACK after sending</span> uit.</td></tr>
+  <tr><td>ACK met AE of AR</td><td>Het LIS heeft het bericht ontvangen maar afgekeurd. De reden staat in MSA-3 of ERR (zie <span class="ui">Last acknowledgement</span>). Vaak gaat het om een onbekende testcode, ontbrekende patiëntgegevens of een verkeerde Receiving application/facility.</td></tr>
+  <tr><td>Letters met accenten komen verkeerd aan</td><td>De <span class="ui">Character set</span> verschilt van die van het LIS.</td></tr>
+  <tr><td><em>Access denied</em> bij het starten van de FHIR-server</td><td>Een andere host dan <code>localhost</code> heeft een URL-registratie nodig (zie hoofdstuk 25) of beheerdersrechten.</td></tr>
+  <tr><td><em>Conflicts with an existing registration</em></td><td>Een ander programma gebruikt die poort of dat adres al. Kies een andere poort.</td></tr>
+  <tr><td>FHIR: 401 of 403</td><td>Het LIS vraagt om authenticatie. Vul een geldig <span class="ui">Bearer token</span> in.</td></tr>
+  <tr><td>FHIR: 400 of 422 met OperationOutcome</td><td>Het LIS keurt de inhoud af. Lees de reden in het antwoord (tabblad <span class="ui">FHIR request</span>) en pas de code- en identifiersystemen of de JSON aan.</td></tr>
+  <tr><td>FHIR: certificaatfout bij https</td><td>Het servercertificaat van het LIS wordt niet vertrouwd door Windows. Installeer het (test)certificaat van de uitgever in de Windows-certificaatopslag.</td></tr>
+</table>
 </main>
 </div>
 </body>

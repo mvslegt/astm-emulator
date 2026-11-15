@@ -20,7 +20,7 @@ public partial class App : Application
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         WriteCrash(e.Exception);
-        MessageBox.Show(e.Exception.Message, "Viper ASTM Emulator - unexpected error", MessageBoxButton.OK, MessageBoxImage.Error);
+        MessageBox.Show(e.Exception.Message, "Lab Interface Emulator - unexpected error", MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;
     }
 

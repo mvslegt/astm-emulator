@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ViperAstmEmulator.Core\ViperAstmEmulator.Core.csproj" />
+    <ProjectReference Include="..\..\src\Hl7Emulator.Core\Hl7Emulator.Core.csproj" />
   </ItemGroup>
 
 </Project>

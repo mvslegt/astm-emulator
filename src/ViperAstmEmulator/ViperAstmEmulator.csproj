@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ViperAstmEmulator.Core\ViperAstmEmulator.Core.csproj" />
+    <ProjectReference Include="..\Hl7Emulator.Core\Hl7Emulator.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -17,7 +17,7 @@ public enum CtReporting
 }
 
 /// <summary>All user-configurable settings, persisted as JSON.</summary>
-public sealed class EmulatorSettings
+public sealed class EmulatorSettings : ISpecimenSettings
 {
     // Connection
     public ConnectionMode Mode { get; set; } = ConnectionMode.TcpClient;

@@ -16,7 +16,15 @@ public enum Scenario
 }
 
 /// <summary>Creates demo specimens and applies result scenarios.</summary>
-public sealed class SampleFactory(EmulatorSettings settings, Random? rng = null)
+/// <summary>Settings needed to create specimens; shared by the ASTM and HL7 emulators.</summary>
+public interface ISpecimenSettings
+{
+    System.Collections.ObjectModel.ObservableCollection<TargetDefinition> Targets { get; }
+    string SpecimenIdPrefix { get; }
+    int NextSpecimenNumber { get; set; }
+}
+
+public sealed class SampleFactory(ISpecimenSettings settings, Random? rng = null)
 {
     private readonly Random _rng = rng ?? new Random();
 

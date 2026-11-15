@@ -1,0 +1,428 @@
+<UserControl x:Class="ViperAstmEmulator.Views.AstmView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:ViperAstmEmulator.Views"
+             xmlns:astm="clr-namespace:ViperAstmEmulator.Core.Astm;assembly=ViperAstmEmulator.Core"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DataContext="{d:DesignInstance views:AstmViewModel}">
+<Grid Margin="8">
+    <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="360" MinWidth="280" />
+        <ColumnDefinition Width="6" />
+        <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <!-- ===================== Settings ===================== -->
+    <TabControl Grid.Column="0">
+        <TabItem Header="Connection">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="6">
+                    <StackPanel IsEnabled="{Binding CanEditConnection}">
+                        <GroupBox Header="Transport">
+                            <StackPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Mode" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" />
+                                </DockPanel>
+                                <StackPanel Visibility="{Binding IsTcp, Converter={StaticResource BoolToVis}}">
+                                    <DockPanel Style="{StaticResource Row}" Visibility="{Binding IsTcpClient, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="LIS host" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding Settings.Host}" />
+                                    </DockPanel>
+                                    <DockPanel Style="{StaticResource Row}" Visibility="{Binding IsTcpServer, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="Bind address" Style="{StaticResource FieldLabel}" ToolTip="Empty = all interfaces" />
+                                        <TextBox Text="{Binding Settings.BindAddress}" ToolTip="Empty = all interfaces" />
+                                    </DockPanel>
+                                    <DockPanel Style="{StaticResource Row}">
+                                        <TextBlock Text="Port" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding Settings.Port}" />
+                                    </DockPanel>
+                                    <CheckBox Content="Auto-reconnect (client)" IsChecked="{Binding Settings.AutoReconnect}"
+                                              Visibility="{Binding IsTcpClient, Converter={StaticResource BoolToVis}}" />
+                                </StackPanel>
+                                <StackPanel Visibility="{Binding IsSerial, Converter={StaticResource BoolToVis}}">
+                                    <DockPanel Style="{StaticResource Row}">
+                                        <TextBlock Text="COM port" Style="{StaticResource FieldLabel}" />
+                                        <Button DockPanel.Dock="Right" Content="↻" MinWidth="28" Padding="4,1" Margin="4,0,0,0"
+                                                Command="{Binding RefreshPortsCommand}" ToolTip="Refresh port list" />
+                                        <ComboBox IsEditable="True" ItemsSource="{Binding ComPorts}" Text="{Binding Settings.ComPort}" />
+                                    </DockPanel>
+                                    <DockPanel Style="{StaticResource Row}">
+                                        <TextBlock Text="Baud rate" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox IsEditable="True" ItemsSource="{Binding BaudRates}" Text="{Binding Settings.BaudRate}" />
+                                    </DockPanel>
+                                    <DockPanel Style="{StaticResource Row}">
+                                        <TextBlock Text="Data bits" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox ItemsSource="{Binding DataBitsValues}" SelectedItem="{Binding Settings.DataBits}" />
+                                    </DockPanel>
+                                    <DockPanel Style="{StaticResource Row}">
+                                        <TextBlock Text="Parity" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox ItemsSource="{Binding Parities}" SelectedItem="{Binding Settings.Parity}" />
+                                    </DockPanel>
+                                    <DockPanel Style="{StaticResource Row}">
+                                        <TextBlock Text="Stop bits" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox ItemsSource="{Binding StopBitsValues}" SelectedItem="{Binding Settings.StopBits}" />
+                                    </DockPanel>
+                                    <DockPanel Style="{StaticResource Row}">
+                                        <TextBlock Text="Handshake" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox ItemsSource="{Binding Handshakes}" SelectedItem="{Binding Settings.Handshake}" />
+                                    </DockPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Low level (LIS1-A / E1381)">
+                            <StackPanel>
+                                <CheckBox Content="Each record starts a new frame" IsChecked="{Binding Settings.RecordPerFrame}"
+                                          ToolTip="Off: records are concatenated and split purely by frame size" />
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Max text per frame" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.MaxFrameText}" ToolTip="1-240 characters (standard: 240)" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Reply timeout (s)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.ReplyTimeoutSeconds}" ToolTip="Wait for ACK/NAK after ENQ or frame (standard: 15)" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Receive timeout (s)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.ReceiveTimeoutSeconds}" ToolTip="Wait for next frame when receiving (standard: 30)" />
+                                </DockPanel>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+
+                    <GroupBox Header="Error injection (live)">
+                        <StackPanel>
+                            <CheckBox Content="Bad checksum on first frame (1st try)" IsChecked="{Binding CorruptFirstFrameChecksum}"
+                                      ToolTip="The LIS should NAK; the emulator then retransmits the frame" />
+                            <CheckBox Content="NAK first frame received from LIS" IsChecked="{Binding NakFirstReceivedFrame}"
+                                      ToolTip="The LIS should retransmit the same frame" />
+                        </StackPanel>
+                    </GroupBox>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Instrument &amp; message">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="6">
+                    <GroupBox Header="Header record (H)">
+                        <StackPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Instrument name" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding Settings.InstrumentName}" />
+                            </DockPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Serial number" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding Settings.InstrumentSerial}" />
+                            </DockPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Software version" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding Settings.SoftwareVersion}" />
+                            </DockPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Receiver ID" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding Settings.ReceiverId}" />
+                            </DockPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Processing ID" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding Settings.ProcessingId}" ToolTip="P = production, T = training, D = debug, Q = QC" />
+                            </DockPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Version" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding Settings.VersionNumber}" />
+                            </DockPanel>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Header="Order / result records">
+                        <StackPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Assay code" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding Settings.AssayCode}" ToolTip="O.5 universal test ID and the overall-result R record" />
+                            </DockPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Specimen type" Style="{StaticResource FieldLabel}" />
+                                <ComboBox IsEditable="True" ItemsSource="{Binding SpecimenTypeOptions}" TextSearch.TextPath="Code"
+                                          Text="{Binding SpecimenType, UpdateSourceTrigger=PropertyChanged}"
+                                          ToolTip="O.16 specimen descriptor. Pick a known type, or type a custom code.">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,2">
+                                                <TextBlock Text="{Binding Code}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding Description}" Foreground="#666" FontSize="11" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </DockPanel>
+                            <TextBlock Text="{Binding SpecimenTypeDescription}" Foreground="#666" FontSize="11" TextWrapping="Wrap"
+                                       Margin="135,0,0,4" />
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Operator ID" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding Settings.OperatorId}" ToolTip="R.11" />
+                            </DockPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Ct values" Style="{StaticResource FieldLabel}" />
+                                <ComboBox ItemsSource="{Binding CtReportingValues}" SelectedItem="{Binding Settings.CtReporting}"
+                                          ToolTip="None | SeparateRecord: R|n|^^^HPV16^CT|28.4 | ResultComponent: R|n|^^^HPV16|POS^28.4" />
+                            </DockPanel>
+                            <CheckBox Content="Patient demographics in P record" IsChecked="{Binding Settings.IncludePatientDemographics}" />
+                            <CheckBox Content="Rack^position in O.4" IsChecked="{Binding Settings.IncludeRackPosition}" />
+                            <CheckBox Content="Report internal control (BC)" IsChecked="{Binding Settings.IncludeControlResult}" />
+                            <CheckBox Content="Report overall interpretation" IsChecked="{Binding Settings.IncludeOverallResult}" />
+                            <CheckBox Content="Trim trailing empty fields" IsChecked="{Binding Settings.TrimTrailingDelimiters}" />
+                            <CheckBox Content="Batch all specimens in one message" IsChecked="{Binding Settings.BatchSamples}"
+                                      ToolTip="Off: one H..L message per specimen" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Header="Behaviour">
+                        <StackPanel>
+                            <CheckBox Content="Add orders received from LIS to list" IsChecked="{Binding Settings.AddReceivedOrdersToList}" />
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Specimen ID prefix" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding Settings.SpecimenIdPrefix}" />
+                            </DockPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Next specimen no." Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding Settings.NextSpecimenNumber}" />
+                            </DockPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <TextBlock Text="Auto-send interval (s)" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding Settings.AutoSendIntervalSeconds}" />
+                            </DockPanel>
+                        </StackPanel>
+                    </GroupBox>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Assay targets">
+            <DockPanel Margin="6">
+                <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="#555" Margin="0,0,0,6"
+                           Text="Reportable channels of the BD Onclarity HPV assay. Codes are sent as ^^^CODE in R.3. Changes apply to newly created specimens." />
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">
+                    <Button Content="Add" Command="{Binding AddTargetCommand}" />
+                    <Button Content="Remove" Command="{Binding RemoveTargetCommand}" CommandParameter="{Binding SelectedItem, ElementName=TargetsGrid}" />
+                    <Button Content="Reset to Onclarity" Command="{Binding ResetTargetsCommand}" />
+                </StackPanel>
+                <DataGrid x:Name="TargetsGrid" ItemsSource="{Binding Settings.Targets}" AutoGenerateColumns="False"
+                          CanUserAddRows="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal">
+                    <DataGrid.Columns>
+                        <DataGridCheckBoxColumn Header="On" Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}" />
+                        <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="100" />
+                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
+                        <DataGridCheckBoxColumn Header="Control" Binding="{Binding IsControl, UpdateSourceTrigger=PropertyChanged}" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </TabItem>
+    </TabControl>
+
+    <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+    <!-- ===================== Main area ===================== -->
+    <Grid Grid.Column="2">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" MinHeight="200" />
+            <RowDefinition Height="6" />
+            <RowDefinition Height="240" MinHeight="100" />
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Background="#F3F5F8" BorderBrush="#D9DDE3" BorderThickness="1" CornerRadius="3" Padding="8,6" Margin="0,0,0,6">
+            <WrapPanel>
+                <Button Content="Connect" Command="{Binding ConnectCommand}" FontWeight="SemiBold" />
+                <Button Content="Disconnect" Command="{Binding DisconnectCommand}" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0" MinWidth="230">
+                    <Ellipse Width="11" Height="11" Margin="0,0,6,0">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#B0B0B0" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                        <Setter Property="Fill" Value="#E6A100" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                        <Setter Property="Fill" Value="#2EA043" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock Text="{Binding ConnectionStatus}" VerticalAlignment="Center" />
+                </StackPanel>
+                <Border Style="{StaticResource ToolbarSep}" />
+                <Button Content="Send selected" Command="{Binding SendSelectedCommand}" CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}" FontWeight="SemiBold"
+                        ToolTip="Send results of the selected specimens" />
+                <Button Content="Send all" Command="{Binding SendAllCommand}" />
+                <Button Content="Host query" Command="{Binding HostQueryCommand}" CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}"
+                        ToolTip="Ask the LIS for orders for the selected specimens (Q record)" />
+                <Border Style="{StaticResource ToolbarSep}" />
+                <CheckBox Content="Auto-send random specimens" IsChecked="{Binding AutoSend}" VerticalAlignment="Center"
+                          ToolTip="Creates and sends one random specimen per interval (Instrument &amp; message tab)" />
+                <TextBlock Text="{Binding Counters}" VerticalAlignment="Center" Margin="16,0,16,0" Foreground="#555" />
+                <Button Content="Help" Click="Help_Click" ToolTip="Gebruikershandleiding (F1)" />
+            </WrapPanel>
+        </Border>
+
+        <TabControl Grid.Row="1">
+            <!-- Specimens -->
+            <TabItem Header="Specimens">
+                <Grid Margin="4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="6" />
+                        <ColumnDefinition Width="400" MinWidth="300" />
+                    </Grid.ColumnDefinitions>
+
+                    <WrapPanel Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,6">
+                        <TextBlock Text="Scenario" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <ComboBox ItemsSource="{Binding Scenarios}" SelectedItem="{Binding SelectedScenario}" Width="170" Margin="0,0,8,0" />
+                        <Button Content="Add specimen" Command="{Binding AddSampleCommand}" />
+                        <Button Content="Add 10" Command="{Binding AddTenCommand}" />
+                        <Button Content="Apply to selected" Command="{Binding ApplyScenarioCommand}" CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}" />
+                        <Button Content="Remove selected" Command="{Binding RemoveSamplesCommand}" CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}" />
+                        <Button Content="Clear" Command="{Binding ClearSamplesCommand}" />
+                    </WrapPanel>
+
+                    <DataGrid x:Name="SamplesGrid" Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Samples}" SelectedItem="{Binding SelectedSample}"
+                              AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Extended" HeadersVisibility="Column"
+                              GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#EEE" AlternatingRowBackground="#FAFBFC">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Specimen ID" Binding="{Binding SpecimenId}" Width="110" />
+                            <DataGridTextColumn Header="Patient ID" Binding="{Binding PatientId}" Width="90" />
+                            <DataGridTextColumn Header="Last name" Binding="{Binding LastName}" Width="90" />
+                            <DataGridTextColumn Header="First name" Binding="{Binding FirstName}" Width="80" />
+                            <DataGridTextColumn Header="DOB" Binding="{Binding BirthDate}" Width="70" />
+                            <DataGridTextColumn Header="Rack" Binding="{Binding Rack}" Width="45" />
+                            <DataGridTextColumn Header="Pos" Binding="{Binding Position}" Width="35" />
+                            <DataGridTextColumn Header="Result" Binding="{Binding Summary, Mode=OneWay}" IsReadOnly="True" Width="*" MinWidth="110">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OverallResult}" Value="POS">
+                                                <Setter Property="Foreground" Value="#C62828" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding OverallResult}" Value="INV">
+                                                <Setter Property="Foreground" Value="#B26A00" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding OverallResult}" Value="IND">
+                                                <Setter Property="Foreground" Value="#B26A00" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status, Mode=OneWay}" IsReadOnly="True" Width="95" />
+                            <DataGridTextColumn Header="Last sent" Binding="{Binding LastSent, Mode=OneWay, StringFormat=HH:mm:ss}" IsReadOnly="True" Width="65" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <GridSplitter Grid.Row="1" Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+                    <DockPanel Grid.Row="1" Grid.Column="2" DataContext="{Binding SelectedSample}">
+                        <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4">
+                            <Run Text="Results for " /><Run Text="{Binding SpecimenId, Mode=OneWay}" />
+                            <Run Text="  -  overall: " /><Run Text="{Binding OverallResult, Mode=OneWay}" />
+                        </TextBlock>
+                        <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+                            <TextBlock Text="Comment (C record)" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBox Text="{Binding Comment, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+                        <DataGrid ItemsSource="{Binding Results}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#EEE">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Target" Binding="{Binding Name}" IsReadOnly="True" Width="*" />
+                                <DataGridTextColumn Header="Code" Binding="{Binding Code}" IsReadOnly="True" Width="95" />
+                                <DataGridTemplateColumn Header="Result" Width="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ComboBox IsEditable="True" BorderThickness="0"
+                                                      ItemsSource="{Binding DataContext.ResultValueOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                      Text="{Binding Result, UpdateSourceTrigger=PropertyChanged}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Ct" Width="60">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox BorderThickness="0" Background="Transparent" Text="{Binding Ct, UpdateSourceTrigger=PropertyChanged}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- Message editor -->
+            <TabItem Header="Message editor">
+                <DockPanel Margin="4">
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Button Content="Build results for selected" Command="{Binding PreviewResultsCommand}" CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}" />
+                        <Button Content="Build host query" Command="{Binding PreviewQueryCommand}" CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}" />
+                        <Button Content="Send this message" Command="{Binding SendPreviewCommand}" FontWeight="SemiBold" />
+                        <TextBlock VerticalAlignment="Center" Foreground="#555" Margin="8,0,0,0"
+                                   Text="One record per line. Edit freely - the text is framed and sent exactly as shown." />
+                    </WrapPanel>
+                    <TextBox Text="{Binding MessagePreview, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource Mono}" FontSize="13"
+                             AcceptsReturn="True" AcceptsTab="False" TextWrapping="NoWrap" VerticalContentAlignment="Top"
+                             HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
+                </DockPanel>
+            </TabItem>
+
+            <!-- Received -->
+            <TabItem Header="Received from LIS">
+                <Grid Margin="4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="260" />
+                        <ColumnDefinition Width="6" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Bottom" Content="Clear" HorizontalAlignment="Left" Margin="0,6,0,0" Command="{Binding ClearReceivedCommand}" />
+                        <ListBox ItemsSource="{Binding ReceivedMessages}" SelectedItem="{Binding SelectedReceived}" DisplayMemberPath="Title" />
+                    </DockPanel>
+                    <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="Transparent" />
+                    <TextBox Grid.Column="2" Text="{Binding SelectedReceived.Text, Mode=OneWay}" IsReadOnly="True" FontFamily="{StaticResource Mono}" FontSize="13"
+                             TextWrapping="NoWrap" VerticalContentAlignment="Top" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+        <!-- Log -->
+        <DockPanel Grid.Row="3">
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                <TextBlock Text="Communication log" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <CheckBox Content="Auto-scroll" IsChecked="{Binding AutoScroll}" Margin="0,0,12,0" />
+                    <Button Content="Copy" Click="CopyLog_Click" ToolTip="Copy selected lines (or all when none selected)" />
+                    <Button Content="Save..." Command="{Binding SaveLogCommand}" />
+                    <Button Content="Clear" Command="{Binding ClearLogCommand}" Margin="0" />
+                </StackPanel>
+            </DockPanel>
+            <ListBox x:Name="LogList" ItemsSource="{Binding LogEntries}" FontFamily="{StaticResource Mono}" SelectionMode="Extended"
+                     VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto" ItemTemplate="{StaticResource LogEntryTemplate}">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="2,0" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
+        </DockPanel>
+    </Grid>
+</Grid>
+</UserControl>

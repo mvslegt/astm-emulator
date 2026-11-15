@@ -1,0 +1,510 @@
+<UserControl x:Class="ViperAstmEmulator.Views.Hl7View"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:ViperAstmEmulator.Views"
+             xmlns:astm="clr-namespace:ViperAstmEmulator.Core.Astm;assembly=ViperAstmEmulator.Core"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DataContext="{d:DesignInstance views:Hl7ViewModel}">
+
+    <UserControl.Resources>
+        <!-- Two-line dropdown item: bold title + grey explanation -->
+        <DataTemplate x:Key="TitleDescription">
+            <StackPanel Margin="0,2">
+                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}" Foreground="#666" FontSize="11" TextWrapping="Wrap" MaxWidth="420" />
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="CodeDescription">
+            <StackPanel Margin="0,2">
+                <TextBlock Text="{Binding Code}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}" Foreground="#666" FontSize="11" TextWrapping="Wrap" MaxWidth="420" />
+            </StackPanel>
+        </DataTemplate>
+        <Style x:Key="StatusDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="11" />
+            <Setter Property="Height" Value="11" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Fill" Value="#B0B0B0" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="360" MinWidth="280" />
+            <ColumnDefinition Width="6" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ===================== Settings ===================== -->
+        <TabControl Grid.Column="0">
+            <TabItem Header="HL7 v2 / MLLP">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="6">
+                        <GroupBox Header="Connection (MLLP over TCP)" IsEnabled="{Binding CanEditMllp}">
+                            <StackPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Mode" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox ItemsSource="{Binding MllpModes}" SelectedItem="{Binding MllpMode}"
+                                              ToolTip="Client: the emulator connects to the LIS. Server: the LIS connects to the emulator." />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}" Visibility="{Binding IsMllpClient, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="LIS host" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.MllpHost}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}" Visibility="{Binding IsMllpServer, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="Bind address" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.MllpBindAddress}" ToolTip="Empty = all interfaces" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Port" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.MllpPort}" ToolTip="2575 is the registered HL7 port" />
+                                </DockPanel>
+                                <CheckBox Content="Auto-reconnect (client)" IsChecked="{Binding Settings.MllpAutoReconnect}"
+                                          Visibility="{Binding IsMllpClient, Converter={StaticResource BoolToVis}}" />
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Character set" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox ItemsSource="{Binding CharacterSets}" SelectedItem="{Binding Settings.CharacterSet}" />
+                                </DockPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Acknowledgements">
+                            <StackPanel>
+                                <CheckBox Content="Wait for ACK after sending" IsChecked="{Binding Settings.WaitForAck}" />
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="ACK timeout (s)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.AckTimeoutSeconds}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Reply to LIS with" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox ItemsSource="{Binding AckModes}" SelectedValuePath="Value" SelectedValue="{Binding AutoAckMode}"
+                                              ItemTemplate="{StaticResource TitleDescription}"
+                                              ToolTip="Acknowledgement sent for every message received from the LIS (applies immediately)" />
+                                </DockPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Message header (MSH)">
+                            <StackPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="HL7 version" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox ItemsSource="{Binding Hl7Versions}" Text="{Binding Settings.Hl7Version}" IsEditable="True"
+                                              ToolTip="MSH-12. Below 2.5 the SPM segment is left out and the specimen type goes in OBR-15." />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Sending application" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.SendingApplication}" ToolTip="MSH-3" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Sending facility" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.SendingFacility}" ToolTip="MSH-4" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Receiving application" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.ReceivingApplication}" ToolTip="MSH-5" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Receiving facility" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.ReceivingFacility}" ToolTip="MSH-6" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Processing ID" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.ProcessingId}" ToolTip="MSH-11: P = production, T = training, D = debugging" />
+                                </DockPanel>
+                                <CheckBox Content="Character set in MSH-18" IsChecked="{Binding Settings.IncludeCharsetInMsh}" />
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="FHIR">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="6">
+                        <GroupBox Header="Send to LIS (FHIR R4 client)">
+                            <StackPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="LIS FHIR base URL" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.FhirBaseUrl}" ToolTip="For example https://lis.example/fhir" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Bearer token" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.FhirBearerToken}"
+                                             ToolTip="Optional. Sent as 'Authorization: Bearer ...'. Stored in plain text in settings.json - use test tokens only." />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Timeout (s)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.FhirTimeoutSeconds}" />
+                                </DockPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Receive from LIS (built-in FHIR server)">
+                            <StackPanel>
+                                <StackPanel IsEnabled="{Binding CanEditFhirServer}">
+                                    <DockPanel Style="{StaticResource Row}">
+                                        <TextBlock Text="Listen host" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding Settings.FhirServerHost}"
+                                                 ToolTip="localhost: only this PC (no admin rights needed). + : all interfaces (needs a URL reservation, see manual)." />
+                                    </DockPanel>
+                                    <DockPanel Style="{StaticResource Row}">
+                                        <TextBlock Text="Port" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding Settings.FhirServerPort}" />
+                                    </DockPanel>
+                                    <DockPanel Style="{StaticResource Row}">
+                                        <TextBlock Text="Base path" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding Settings.FhirServerPath}" ToolTip="e.g. fhir gives http://localhost:8090/fhir/" />
+                                    </DockPanel>
+                                </StackPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Respond with" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox ItemsSource="{Binding FhirResponseModes}" SelectedValuePath="Value" SelectedValue="{Binding FhirServerResponseMode}"
+                                              ItemTemplate="{StaticResource TitleDescription}" ToolTip="Applies immediately" />
+                                </DockPanel>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Code and identifier systems">
+                            <StackPanel>
+                                <TextBlock TextWrapping="Wrap" Foreground="#666" FontSize="11" Margin="0,0,0,4"
+                                           Text="URIs used in FHIR codings and identifiers. Replace the example.org placeholders with the systems your LIS expects." />
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Local code system" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.LocalCodeSystem}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Patient ID system" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.PatientIdSystem}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Specimen ID system" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.SpecimenIdSystem}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Order ID system" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.OrderIdSystem}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Message event system" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.MessageEventSystem}" />
+                                </DockPanel>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Content">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="6">
+                        <GroupBox Header="Test and specimen">
+                            <StackPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Test code" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.AssayCode}" ToolTip="OBR-4 / ServiceRequest.code" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Test name" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.AssayName}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Specimen type" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox IsEditable="True" ItemsSource="{Binding SpecimenTypeOptions}" TextSearch.TextPath="Code"
+                                              Text="{Binding SpecimenType, UpdateSourceTrigger=PropertyChanged}"
+                                              ItemTemplate="{StaticResource CodeDescription}"
+                                              ToolTip="SPM-4 / OBR-15 / Specimen.type. Pick a known type or type a custom code." />
+                                </DockPanel>
+                                <TextBlock Text="{Binding SpecimenTypeDescription}" Foreground="#666" FontSize="11" TextWrapping="Wrap" Margin="135,0,0,4" />
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Instrument ID" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.InstrumentId}" ToolTip="OBX-18 / Observation.device" />
+                                </DockPanel>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Results">
+                            <StackPanel>
+                                <CheckBox Content="Report Ct values" IsChecked="{Binding Settings.IncludeCt}" />
+                                <CheckBox Content="Report internal control (BC)" IsChecked="{Binding Settings.IncludeControlResult}" />
+                                <CheckBox Content="Report overall interpretation" IsChecked="{Binding Settings.IncludeOverallResult}" />
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Behaviour">
+                            <StackPanel>
+                                <CheckBox Content="Add orders received from LIS to list" IsChecked="{Binding Settings.AddReceivedOrdersToList}" />
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Specimen ID prefix" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.SpecimenIdPrefix}" />
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource Row}">
+                                    <TextBlock Text="Next specimen no." Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Settings.NextSpecimenNumber}" />
+                                </DockPanel>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+        <!-- ===================== Main area ===================== -->
+        <Grid Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" MinHeight="200" />
+                <RowDefinition Height="6" />
+                <RowDefinition Height="220" MinHeight="100" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="#F3F5F8" BorderBrush="#D9DDE3" BorderThickness="1" CornerRadius="3" Padding="8,6" Margin="0,0,0,6">
+                <WrapPanel>
+                    <Button Content="Connect HL7" Command="{Binding MllpConnectCommand}" FontWeight="SemiBold" />
+                    <Button Content="Disconnect" Command="{Binding MllpDisconnectCommand}" />
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0" MinWidth="220">
+                        <Ellipse>
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse" BasedOn="{StaticResource StatusDot}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsMllpRunning}" Value="True"><Setter Property="Fill" Value="#E6A100" /></DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMllpConnected}" Value="True"><Setter Property="Fill" Value="#2EA043" /></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="{Binding MllpStatus}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Border Style="{StaticResource ToolbarSep}" />
+                    <Button Content="Start FHIR server" Command="{Binding FhirServerStartCommand}" />
+                    <Button Content="Stop" Command="{Binding FhirServerStopCommand}" />
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0" MinWidth="220">
+                        <Ellipse>
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse" BasedOn="{StaticResource StatusDot}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFhirServerRunning}" Value="True"><Setter Property="Fill" Value="#2EA043" /></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="{Binding FhirServerStatus}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Border Style="{StaticResource ToolbarSep}" />
+                    <TextBlock Text="{Binding Counters}" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="#555" />
+                    <Button Content="Help" Click="Help_Click" ToolTip="Gebruikershandleiding (F1)" />
+                </WrapPanel>
+            </Border>
+
+            <TabControl Grid.Row="1">
+                <!-- Specimens -->
+                <TabItem Header="Specimens">
+                    <Grid Margin="4">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="6" />
+                            <ColumnDefinition Width="400" MinWidth="300" />
+                        </Grid.ColumnDefinitions>
+
+                        <WrapPanel Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,6">
+                            <TextBlock Text="Scenario" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <ComboBox ItemsSource="{Binding Scenarios}" SelectedItem="{Binding SelectedScenario}" Width="170" Margin="0,0,8,0" />
+                            <Button Content="Add specimen" Command="{Binding AddSampleCommand}" />
+                            <Button Content="Add 10" Command="{Binding AddTenCommand}" />
+                            <Button Content="Apply to selected" Command="{Binding ApplyScenarioCommand}" CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}" />
+                            <Button Content="Remove selected" Command="{Binding RemoveSamplesCommand}" CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}" />
+                            <Button Content="Clear" Command="{Binding ClearSamplesCommand}" />
+                        </WrapPanel>
+
+                        <Border Grid.Row="1" Grid.ColumnSpan="3" BorderBrush="#D9DDE3" BorderThickness="1" CornerRadius="3" Padding="6" Margin="0,0,0,6">
+                            <WrapPanel>
+                                <TextBlock Text="HL7 v2" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <ComboBox ItemsSource="{Binding Hl7Kinds}" SelectedItem="{Binding SelectedHl7Kind}" Width="230" Margin="0,0,6,0"
+                                          ItemTemplate="{StaticResource CodeDescription}" />
+                                <Button Content="Send via HL7" Command="{Binding SendHl7SelectedCommand}" CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}" FontWeight="SemiBold"
+                                        ToolTip="One message per selected specimen, over the MLLP connection" />
+                                <Border Style="{StaticResource ToolbarSep}" />
+                                <TextBlock Text="FHIR" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <ComboBox ItemsSource="{Binding FhirKinds}" SelectedItem="{Binding SelectedFhirKind}" Width="230" Margin="0,0,6,0"
+                                          ItemTemplate="{StaticResource TitleDescription}" />
+                                <Button Content="Send via FHIR" Command="{Binding SendFhirSelectedCommand}" CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}" FontWeight="SemiBold"
+                                        ToolTip="One request per selected specimen, to the LIS FHIR base URL" />
+                            </WrapPanel>
+                        </Border>
+
+                        <DataGrid x:Name="SamplesGrid" Grid.Row="2" Grid.Column="0" ItemsSource="{Binding Samples}" SelectedItem="{Binding SelectedSample}"
+                                  AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Extended" HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#EEE" AlternatingRowBackground="#FAFBFC">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Specimen ID" Binding="{Binding SpecimenId}" Width="110" />
+                                <DataGridTextColumn Header="Patient ID" Binding="{Binding PatientId}" Width="90" />
+                                <DataGridTextColumn Header="Last name" Binding="{Binding LastName}" Width="90" />
+                                <DataGridTextColumn Header="First name" Binding="{Binding FirstName}" Width="80" />
+                                <DataGridTextColumn Header="DOB" Binding="{Binding BirthDate}" Width="70" />
+                                <DataGridTextColumn Header="Sex" Binding="{Binding Sex}" Width="35" />
+                                <DataGridTextColumn Header="Result" Binding="{Binding Summary, Mode=OneWay}" IsReadOnly="True" Width="*" MinWidth="110">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding OverallResult}" Value="POS">
+                                                    <Setter Property="Foreground" Value="#C62828" />
+                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding OverallResult}" Value="INV"><Setter Property="Foreground" Value="#B26A00" /></DataTrigger>
+                                                <DataTrigger Binding="{Binding OverallResult}" Value="IND"><Setter Property="Foreground" Value="#B26A00" /></DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status, Mode=OneWay}" IsReadOnly="True" Width="105" />
+                                <DataGridTextColumn Header="Last sent" Binding="{Binding LastSent, Mode=OneWay, StringFormat=HH:mm:ss}" IsReadOnly="True" Width="65" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <GridSplitter Grid.Row="2" Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+                        <DockPanel Grid.Row="2" Grid.Column="2" DataContext="{Binding SelectedSample}">
+                            <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4">
+                                <Run Text="Results for " /><Run Text="{Binding SpecimenId, Mode=OneWay}" />
+                                <Run Text="  -  overall: " /><Run Text="{Binding OverallResult, Mode=OneWay}" />
+                            </TextBlock>
+                            <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+                                <TextBlock Text="Comment (NTE / note)" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBox Text="{Binding Comment, UpdateSourceTrigger=PropertyChanged}" />
+                            </DockPanel>
+                            <DataGrid ItemsSource="{Binding Results}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                                      HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#EEE">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Target" Binding="{Binding Name}" IsReadOnly="True" Width="*" />
+                                    <DataGridTextColumn Header="Code" Binding="{Binding Code}" IsReadOnly="True" Width="95" />
+                                    <DataGridTemplateColumn Header="Result" Width="80">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <ComboBox IsEditable="True" BorderThickness="0"
+                                                          ItemsSource="{Binding DataContext.ResultValueOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                          Text="{Binding Result, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Header="Ct" Width="60">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBox BorderThickness="0" Background="Transparent" Text="{Binding Ct, UpdateSourceTrigger=PropertyChanged}" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                    </Grid>
+                </TabItem>
+
+                <!-- HL7 v2 editor -->
+                <TabItem Header="HL7 v2 message">
+                    <DockPanel Margin="4">
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <ComboBox ItemsSource="{Binding Hl7Kinds}" SelectedItem="{Binding SelectedHl7Kind}" Width="260" Margin="0,0,6,0"
+                                      ItemTemplate="{StaticResource CodeDescription}" />
+                            <Button Content="Build for selected specimen" Command="{Binding BuildHl7Command}" />
+                            <Button Content="Send this message" Command="{Binding SendHl7EditorCommand}" FontWeight="SemiBold" />
+                            <TextBlock VerticalAlignment="Center" Foreground="#555" Margin="8,0,0,0"
+                                       Text="One segment per line; edit freely. MSH-10 must be unique to match the ACK." />
+                        </WrapPanel>
+                        <Border DockPanel.Dock="Bottom" BorderBrush="#D9DDE3" BorderThickness="1" CornerRadius="3" Padding="6" Margin="0,6,0,0">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Margin="0,0,0,4">
+                                    <Run Text="Last acknowledgement: " FontWeight="SemiBold" /><Run Text="{Binding LastAckSummary, Mode=OneWay}" />
+                                </TextBlock>
+                                <TextBox Text="{Binding LastAck, Mode=OneWay}" IsReadOnly="True" FontFamily="{StaticResource Mono}" Height="60"
+                                         TextWrapping="NoWrap" VerticalContentAlignment="Top" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
+                            </DockPanel>
+                        </Border>
+                        <TextBox Text="{Binding Hl7Editor, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource Mono}" FontSize="13"
+                                 AcceptsReturn="True" TextWrapping="NoWrap" VerticalContentAlignment="Top"
+                                 HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
+                    </DockPanel>
+                </TabItem>
+
+                <!-- FHIR editor -->
+                <TabItem Header="FHIR request">
+                    <Grid Margin="4">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="6" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <WrapPanel Grid.Row="0" Margin="0,0,0,6">
+                            <ComboBox ItemsSource="{Binding FhirKinds}" SelectedItem="{Binding SelectedFhirKind}" Width="260" Margin="0,0,6,0"
+                                      ItemTemplate="{StaticResource TitleDescription}" />
+                            <Button Content="Build for selected specimen" Command="{Binding BuildFhirCommand}" />
+                            <Button Content="Send this request" Command="{Binding SendFhirEditorCommand}" FontWeight="SemiBold" />
+                        </WrapPanel>
+                        <DockPanel Grid.Row="1" Margin="0,0,0,6">
+                            <ComboBox ItemsSource="{Binding HttpMethods}" Text="{Binding FhirMethod}" IsEditable="True" Width="80" Margin="0,0,6,0" />
+                            <TextBlock Text="{Binding Settings.FhirBaseUrl, StringFormat={}{0}/}" VerticalAlignment="Center" Foreground="#555" />
+                            <TextBox Text="{Binding FhirPath, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource Mono}"
+                                     ToolTip="Path relative to the base URL, e.g. Patient, ServiceRequest?status=active, $process-message (empty = base URL)" />
+                        </DockPanel>
+                        <TextBox Grid.Row="2" Text="{Binding FhirBody, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource Mono}" FontSize="12"
+                                 AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap" VerticalContentAlignment="Top"
+                                 HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
+                        <GridSplitter Grid.Row="3" Height="6" HorizontalAlignment="Stretch" Background="Transparent" />
+                        <DockPanel Grid.Row="4">
+                            <TextBlock DockPanel.Dock="Top" Margin="0,0,0,4">
+                                <Run Text="Response: " FontWeight="SemiBold" /><Run Text="{Binding FhirResponseSummary, Mode=OneWay}" />
+                            </TextBlock>
+                            <TextBox Text="{Binding FhirResponse, Mode=OneWay}" IsReadOnly="True" FontFamily="{StaticResource Mono}" FontSize="12"
+                                     TextWrapping="NoWrap" VerticalContentAlignment="Top" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
+                        </DockPanel>
+                    </Grid>
+                </TabItem>
+
+                <!-- Received -->
+                <TabItem Header="Received from LIS">
+                    <Grid Margin="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="340" />
+                            <ColumnDefinition Width="6" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Bottom" Content="Clear" HorizontalAlignment="Left" Margin="0,6,0,0" Command="{Binding ClearReceivedCommand}" />
+                            <ListBox ItemsSource="{Binding ReceivedItems}" SelectedItem="{Binding SelectedReceived}" DisplayMemberPath="Title" />
+                        </DockPanel>
+                        <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="Transparent" />
+                        <TextBox Grid.Column="2" Text="{Binding SelectedReceived.Detail, Mode=OneWay}" IsReadOnly="True" FontFamily="{StaticResource Mono}" FontSize="12"
+                                 TextWrapping="NoWrap" VerticalContentAlignment="Top" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
+                    </Grid>
+                </TabItem>
+            </TabControl>
+
+            <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+            <DockPanel Grid.Row="3">
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                    <TextBlock Text="Communication log" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <CheckBox Content="Auto-scroll" IsChecked="{Binding AutoScroll}" Margin="0,0,12,0" />
+                        <Button Content="Copy" Click="CopyLog_Click" ToolTip="Copy selected lines (or all when none selected)" />
+                        <Button Content="Save..." Command="{Binding SaveLogCommand}" />
+                        <Button Content="Clear" Command="{Binding ClearLogCommand}" Margin="0" />
+                    </StackPanel>
+                </DockPanel>
+                <ListBox x:Name="LogList" ItemsSource="{Binding LogEntries}" FontFamily="{StaticResource Mono}" SelectionMode="Extended"
+                         VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto" ItemTemplate="{StaticResource LogEntryTemplate}">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem"><Setter Property="Padding" Value="2,0" /></Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </DockPanel>
+        </Grid>
+    </Grid>
+</UserControl>
