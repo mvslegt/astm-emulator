@@ -185,8 +185,21 @@
                                 </DockPanel>
                                 <DockPanel Style="{StaticResource Row}">
                                     <TextBlock Text="Specimen type" Style="{StaticResource FieldLabel}" />
-                                    <TextBox Text="{Binding Settings.SpecimenType}" ToolTip="O.16 specimen descriptor" />
+                                    <ComboBox IsEditable="True" ItemsSource="{Binding SpecimenTypeOptions}" TextSearch.TextPath="Code"
+                                              Text="{Binding SpecimenType, UpdateSourceTrigger=PropertyChanged}"
+                                              ToolTip="O.16 specimen descriptor. Pick a known type, or type a custom code.">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="0,2">
+                                                    <TextBlock Text="{Binding Code}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding Description}" Foreground="#666" FontSize="11" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
                                 </DockPanel>
+                                <TextBlock Text="{Binding SpecimenTypeDescription}" Foreground="#666" FontSize="11" TextWrapping="Wrap"
+                                           Margin="135,0,0,4" />
                                 <DockPanel Style="{StaticResource Row}">
                                     <TextBlock Text="Operator ID" Style="{StaticResource FieldLabel}" />
                                     <TextBox Text="{Binding Settings.OperatorId}" ToolTip="R.11" />

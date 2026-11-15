@@ -200,7 +200,7 @@ dotnet run --project src/ViperAstmEmulator</pre>
 <table>
   <tr><th>Instelling</th><th>Uitleg</th></tr>
   <tr><td><span class="ui">Assay code</span></td><td>Testcode in het orderrecord (O.5) en in het resultaatrecord met de totaaluitslag. Standaard <code>HPV</code>.</td></tr>
-  <tr><td><span class="ui">Specimen type</span></td><td>Monstertype in O.16, bijvoorbeeld <code>Cervical</code>.</td></tr>
+  <tr><td><span class="ui">Specimen type</span></td><td>Monstertype in O.16. Kies een bekend HPV-monstertype uit de lijst (zie de tabel hieronder); onder het veld ziet u wat de gekozen code betekent. U kunt ook zelf een code typen als uw LIS een andere code verwacht.</td></tr>
   <tr><td><span class="ui">Operator ID</span></td><td>Gebruiker die in elk resultaatrecord wordt vermeld (R.11).</td></tr>
   <tr><td><span class="ui">Ct values</span></td><td>
     <code>None</code>: alleen de kwalitatieve uitslag.<br>
@@ -213,6 +213,18 @@ dotnet run --project src/ViperAstmEmulator</pre>
   <tr><td><span class="ui">Trim trailing empty fields</span></td><td>Lege velden aan het eind van een record weglaten (bijvoorbeeld <code>L|1|N</code> in plaats van <code>L|1|N|||</code>).</td></tr>
   <tr><td><span class="ui">Batch all specimens in one message</span></td><td>Aan: alle geselecteerde monsters in één bericht (één H … L). Uit (standaard): één bericht per monster.</td></tr>
 </table>
+<h3>Bekende monstertypen</h3>
+<p>De lijst bij <span class="ui">Specimen type</span> bevat de monstertypen die de BD Onclarity HPV-assay op de Viper LT accepteert:</p>
+<table>
+  <tr><th>Code</th><th>Monstertype</th></tr>
+  <tr><td><code>SurePath</code></td><td>BD SurePath-conserveringsvloeistof (liquid-based cytologie)</td></tr>
+  <tr><td><code>ThinPrep</code></td><td>Hologic ThinPrep PreservCyt-oplossing (liquid-based cytologie)</td></tr>
+  <tr><td><code>CervicalBrush</code></td><td>Cervixborstelmonster in BD Onclarity HPV Cervical Brush Diluent</td></tr>
+  <tr><td><code>SelfVaginal</code></td><td>Zelf afgenomen vaginaal monster (BD Onclarity HPV-zelfafname)</td></tr>
+  <tr><td><code>Cervical</code></td><td>Cervixmonster, type niet gespecificeerd (standaard)</td></tr>
+</table>
+<div class="note">Deze codes zijn leesbare codes van de emulator zelf, niet de officiële codes van BD. Verwacht uw LIS andere codes,
+typ die dan zelf in het veld.</div>
 <h3>Behaviour</h3>
 <table>
   <tr><th>Instelling</th><th>Uitleg</th></tr>

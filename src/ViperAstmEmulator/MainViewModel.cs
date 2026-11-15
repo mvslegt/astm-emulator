@@ -39,6 +39,22 @@ public sealed class MainViewModel : ObservableObject
     public CtReporting[] CtReportingValues { get; } = Enum.GetValues<CtReporting>();
     public Scenario[] Scenarios { get; } = Enum.GetValues<Scenario>();
     public string[] ResultValueOptions { get; } = ResultValues.All;
+    public IReadOnlyList<SpecimenTypeOption> SpecimenTypeOptions { get; } = SpecimenTypes.Known;
+
+    /// <summary>O.16 specimen descriptor: picked from the known list or typed as a custom code.</summary>
+    public string SpecimenType
+    {
+        get => Settings.SpecimenType;
+        set
+        {
+            Settings.SpecimenType = value?.Trim() ?? "";
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SpecimenTypeDescription));
+        }
+    }
+
+    public string SpecimenTypeDescription => SpecimenTypes.Find(Settings.SpecimenType)?.Description
+        ?? (string.IsNullOrWhiteSpace(Settings.SpecimenType) ? "No specimen type - O.16 is left empty" : "Custom code (not in the known list)");
 
     private string[] _comPorts = SerialPort.GetPortNames();
     public string[] ComPorts { get => _comPorts; private set => Set(ref _comPorts, value); }
